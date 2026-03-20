@@ -379,13 +379,13 @@ let items = [];
 let _saveTimeout = null;
 
 function save() {
-  const data = items.map(i => ({
-    ...i,
-    _interval: undefined,
-    _lastTick: undefined,
-    _notesOpen: undefined,
-    _quill: undefined,
-  }));
+  const data = items.map(i => {
+    const clean = {};
+    for (const [k, v] of Object.entries(i)) {
+      if (!k.startsWith('_') && v !== undefined) clean[k] = v;
+    }
+    return clean;
+  });
 
   // Always save to localStorage as backup
   localStorage.setItem('desktop-items', JSON.stringify(data));
@@ -665,7 +665,7 @@ function parseTime(str) {
   return null;
 }
 
-function esc(s) { return s.replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+function esc(s) { return (s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
 
 function hasNotes(item) {
   if (!item.notes || item.notes === '') return false;
