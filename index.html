@@ -691,7 +691,8 @@ function addTimer() {
 function archiveItem(idx) {
   const item = items.splice(idx, 1)[0];
   stopInterval(item);
-  const archived = { ...item, _interval: undefined, _lastTick: undefined, _notesOpen: undefined, _quill: undefined, archivedAt: new Date().toISOString() };
+  const archived = { ...item, archivedAt: new Date().toISOString() };
+  delete archived._interval; delete archived._lastTick; delete archived._notesOpen; delete archived._quill;
   saveArchive([archived]);
   save(); renderAll();
 }
@@ -701,9 +702,11 @@ function archiveAllChecked() {
   const done = items.filter(isDone);
   if (done.length === 0) return;
   done.forEach(i => { if (i._interval) stopInterval(i); });
-  const toArchive = done.map(i => ({
-    ...i, _interval: undefined, _lastTick: undefined, _notesOpen: undefined, _quill: undefined, archivedAt: new Date().toISOString()
-  }));
+  const toArchive = done.map(i => {
+    const a = { ...i, archivedAt: new Date().toISOString() };
+    delete a._interval; delete a._lastTick; delete a._notesOpen; delete a._quill;
+    return a;
+  });
   saveArchive(toArchive);
   items = items.filter(i => !isDone(i));
   save(); renderAll();
@@ -712,7 +715,10 @@ function archiveAllChecked() {
 function saveArchive(archivedItems) {
   if (!currentUser) return;
   const ref = db.collection('users').doc(currentUser.uid).collection('archive');
-  archivedItems.forEach(item => ref.add(item));
+  archivedItems.forEach(item => {
+    const clean = JSON.parse(JSON.stringify(item));
+    ref.add(clean);
+  });
 }
 
 // ──────────── Drag & Drop reorder ────────────
