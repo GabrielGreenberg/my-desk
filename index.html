@@ -341,8 +341,7 @@ auth.onAuthStateChanged(user => {
   } else {
     signInBtn.style.display = '';
     userInfo.style.display = 'none';
-    items = [];
-    renderAll();
+    loadItems();
   }
 });
 
@@ -361,32 +360,45 @@ let items = [];
 let _saveTimeout = null;
 
 function save() {
-  if (!currentUser) return;
-  clearTimeout(_saveTimeout);
-  _saveTimeout = setTimeout(() => {
-    const data = items.map(i => ({
-      ...i,
-      _interval: undefined,
-      _lastTick: undefined,
-      _notesOpen: undefined,
-      _quill: undefined,
-    }));
-    db.collection('users').doc(currentUser.uid).set({ items: data }, { merge: true });
-  }, 500);
+  const data = items.map(i => ({
+    ...i,
+    _interval: undefined,
+    _lastTick: undefined,
+    _notesOpen: undefined,
+    _quill: undefined,
+  }));
+
+  // Always save to localStorage as backup
+  localStorage.setItem('desktop-items', JSON.stringify(data));
+
+  // Save to Firestore if signed in
+  if (currentUser) {
+    clearTimeout(_saveTimeout);
+    _saveTimeout = setTimeout(() => {
+      db.collection('users').doc(currentUser.uid).set({ items: data }, { merge: true })
+        .then(() => console.log('Saved to Firestore'))
+        .catch(err => console.error('Firestore save error:', err));
+    }, 500);
+  }
 }
 
 async function loadItems() {
-  if (!currentUser) return;
-  try {
-    const doc = await db.collection('users').doc(currentUser.uid).get();
-    if (doc.exists && doc.data().items) {
-      items = doc.data().items;
-    } else {
-      items = [];
+  if (currentUser) {
+    try {
+      const doc = await db.collection('users').doc(currentUser.uid).get();
+      if (doc.exists && doc.data().items) {
+        items = doc.data().items;
+      } else {
+        // First sign-in: migrate localStorage data to Firestore
+        items = JSON.parse(localStorage.getItem('desktop-items') || '[]');
+        if (items.length > 0) save();
+      }
+    } catch (e) {
+      console.error('Firestore load error:', e);
+      items = JSON.parse(localStorage.getItem('desktop-items') || '[]');
     }
-  } catch (e) {
-    console.error('Load error:', e);
-    items = [];
+  } else {
+    items = JSON.parse(localStorage.getItem('desktop-items') || '[]');
   }
   renderAll();
   resumeTimers();
