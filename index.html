@@ -283,6 +283,14 @@
       text-decoration: underline;
     }
     #sign-out-btn:hover { color: #555; }
+    #sync-status {
+      font-size: 0.75rem;
+      color: #4ade80;
+      margin-left: 4px;
+      transition: opacity 0.3s;
+    }
+    #sync-status.error { color: #e74c3c; }
+    #sync-status.local { color: #f0ad4e; }
   </style>
 </head>
 <body>
@@ -294,6 +302,7 @@
     <span id="user-name"></span>
     <button id="sign-out-btn" onclick="signOut()">sign out</button>
   </div>
+  <span id="sync-status"></span>
 </div>
 <button id="fs-btn" onclick="toggleFullscreen()" title="Toggle fullscreen">&#x26F6;</button>
 <div id="clock">00:00:00</div>
@@ -355,6 +364,16 @@ function tickClock() {
 tickClock();
 setInterval(tickClock, 1000);
 
+// ──────────── Sync Status ────────────
+function setSyncStatus(msg, type) {
+  const el = document.getElementById('sync-status');
+  el.textContent = msg;
+  el.className = type || '';
+  if (msg) setTimeout(() => {
+    if (el.textContent === msg) el.textContent = '';
+  }, 3000);
+}
+
 // ──────────── State ────────────
 let items = [];
 let _saveTimeout = null;
@@ -376,8 +395,8 @@ function save() {
     clearTimeout(_saveTimeout);
     _saveTimeout = setTimeout(() => {
       db.collection('users').doc(currentUser.uid).set({ items: data }, { merge: true })
-        .then(() => console.log('Saved to Firestore'))
-        .catch(err => console.error('Firestore save error:', err));
+        .then(() => setSyncStatus('☁ Saved', ''))
+        .catch(err => { console.error('Firestore save error:', err); setSyncStatus('Save failed', 'error'); });
     }, 500);
   }
 }
@@ -388,17 +407,23 @@ async function loadItems() {
       const doc = await db.collection('users').doc(currentUser.uid).get();
       if (doc.exists && doc.data().items) {
         items = doc.data().items;
+        setSyncStatus('☁ Loaded from cloud', '');
       } else {
         // First sign-in: migrate localStorage data to Firestore
         items = JSON.parse(localStorage.getItem('desktop-items') || '[]');
-        if (items.length > 0) save();
+        if (items.length > 0) {
+          save();
+          setSyncStatus('☁ Migrated to cloud', '');
+        }
       }
     } catch (e) {
       console.error('Firestore load error:', e);
       items = JSON.parse(localStorage.getItem('desktop-items') || '[]');
+      setSyncStatus('Cloud error — using local', 'error');
     }
   } else {
     items = JSON.parse(localStorage.getItem('desktop-items') || '[]');
+    setSyncStatus('Local only — sign in to sync', 'local');
   }
   renderAll();
   resumeTimers();
