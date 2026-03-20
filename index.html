@@ -524,8 +524,8 @@ function renderTimer(item, idx) {
       <div class="timer-display">
         <input class="time-input elapsed-input" value="${formatTime(item.elapsed)}" title="Elapsed time (mm:ss or hh:mm:ss)" /> / <input class="time-input" value="${formatTime(item.totalSeconds)}" title="Total time (mm:ss or hh:mm:ss)" />
       </div>
-      <button class="btn" title="${item.running ? 'Pause' : 'Start'}">${item.running ? '&#9646;&#9646;' : '&#9654;'}</button>
-      <button class="btn" title="Reset">&#8634;</button>
+      <button class="btn play-btn" title="${item.running ? 'Pause' : 'Start'}">${item.running ? '&#9646;&#9646;' : '&#9654;'}</button>
+      <button class="btn reset-btn" title="Reset">&#8634;</button>
       <button class="btn notes-toggle ${hasNotes(item) ? 'has-notes' : ''}" title="Notes">&#9660;</button>
       <button class="btn delete-btn" title="Delete">&#10005;</button>
     </div>
@@ -552,8 +552,8 @@ function renderTimer(item, idx) {
   if (item._notesOpen) initQuill(row, item);
 
   row.querySelector('.check-btn').onclick = () => { if (done) { item.elapsed = 0; item.running = false; stopInterval(item); save(); renderAll(); } };
-  row.querySelector('.btn[title="Start"], .btn[title="Pause"]').onclick = () => { toggleTimer(item, idx); };
-  row.querySelector('.btn[title="Reset"]').onclick = () => { item.elapsed = 0; item.running = false; stopInterval(item); save(); renderAll(); };
+  row.querySelector('.play-btn').onclick = () => { toggleTimer(item, idx); };
+  row.querySelector('.reset-btn').onclick = () => { item.elapsed = 0; item.running = false; stopInterval(item); save(); renderAll(); };
   row.querySelector('.delete-btn').onclick = () => { stopInterval(item); archiveItem(idx); };
 
   return row;
