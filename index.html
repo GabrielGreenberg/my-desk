@@ -6,18 +6,22 @@
   <title>Desktop</title>
   <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #1a1a2e;
-      color: #e0e0e0;
+      background: #f5f5f7;
+      color: #333;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 56px 20px 40px;
+      padding: 40px 20px;
     }
 
     /* ---- Clock & Date ---- */
@@ -25,11 +29,11 @@
       font-size: 5rem;
       font-weight: 200;
       letter-spacing: 4px;
-      color: #fff;
+      color: #222;
     }
     #date {
       font-size: 1.15rem;
-      color: #8888aa;
+      color: #888;
       margin-top: 4px;
       margin-bottom: 48px;
     }
@@ -46,7 +50,8 @@
     /* ---- Shared item row ---- */
     .item {
       position: relative;
-      background: #16213e;
+      background: #fff;
+      border: 1px solid #e0e0e0;
       border-radius: 10px;
       overflow: hidden;
       display: flex;
@@ -71,18 +76,13 @@
     .item .bar {
       position: absolute;
       inset: 0;
-      background: #0f3460;
+      background: #4ade80;
       width: 0%;
       transition: width 0.25s linear;
       pointer-events: none;
       border-radius: 10px;
     }
-    .item.done .bar { background: #1a5c3a; }
-
-    /* ---- Checked to-do ---- */
-    .item.checked .bar { width: 100% !important; background: #1a5c3a; }
-    .item.checked .check-btn { color: #4ade80; }
-    .item.checked .item-label { text-decoration: line-through; color: #666; }
+    .item.done .bar { background: #c6f0d4; }
 
     /* ---- Item content sits above bar ---- */
     .item-content {
@@ -101,16 +101,19 @@
       outline: none;
       background: none;
       border: none;
-      color: #e0e0e0;
+      color: #333;
       font-family: inherit;
     }
-    .item-label::placeholder { color: #555; }
+    .item-label::placeholder { color: #aaa; }
+    /* ---- Checked to-do: green fill like completed timer ---- */
+    .item.checked .bar { width: 100% !important; background: #c6f0d4; }
+    .item.checked .check-btn { color: #4ade80; }
 
     /* ---- Timer display ---- */
     .timer-display {
       font-variant-numeric: tabular-nums;
       font-size: 0.85rem;
-      color: #aaa;
+      color: #666;
       white-space: nowrap;
       min-width: 100px;
       text-align: right;
@@ -120,7 +123,7 @@
     .btn {
       background: none;
       border: none;
-      color: #888;
+      color: #999;
       cursor: pointer;
       font-size: 1.05rem;
       padding: 4px;
@@ -128,7 +131,7 @@
       border-radius: 4px;
       transition: color 0.15s, background 0.15s;
     }
-    .btn:hover { color: #fff; background: rgba(255,255,255,0.08); }
+    .btn:hover { color: #333; background: rgba(0,0,0,0.05); }
 
     .check-btn { font-size: 1.1rem; }
     .check-btn.checked { color: #4ade80; }
@@ -136,29 +139,29 @@
     /* ---- Time input (for setting duration) ---- */
     .time-input {
       width: 64px;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid #333;
+      background: rgba(0,0,0,0.03);
+      border: 1px solid #ddd;
       border-radius: 6px;
-      color: #e0e0e0;
+      color: #333;
       font-family: inherit;
       font-size: 0.85rem;
       padding: 3px 6px;
       text-align: center;
       font-variant-numeric: tabular-nums;
     }
-    .time-input:focus { border-color: #0f3460; outline: none; }
+    .time-input:focus { border-color: #4a90d9; outline: none; }
 
     /* ---- Notes area ---- */
     .notes-toggle {
       background: none;
       border: none;
-      color: #555;
+      color: #bbb;
       cursor: pointer;
       font-size: 0.75rem;
       padding: 2px 4px;
       transition: color 0.15s;
     }
-    .notes-toggle:hover { color: #aaa; }
+    .notes-toggle:hover { color: #666; }
     .notes-toggle.has-notes { color: #4a90d9; }
 
     .notes-area {
@@ -169,26 +172,21 @@
     }
     .notes-area.open { display: block; }
 
-    /* ---- Quill overrides (dark) ---- */
+    /* ---- Quill overrides ---- */
     .notes-area .ql-toolbar {
-      border: 1px solid #333;
+      border: 1px solid #e0e0e0;
       border-radius: 6px 6px 0 0;
-      background: #1a1a2e;
+      background: #f9f9fb;
       padding: 4px 6px;
     }
-    .notes-area .ql-toolbar .ql-stroke { stroke: #888; }
-    .notes-area .ql-toolbar .ql-fill { fill: #888; }
-    .notes-area .ql-toolbar .ql-picker-label { color: #888; }
-    .notes-area .ql-toolbar button:hover .ql-stroke { stroke: #fff; }
-    .notes-area .ql-toolbar button:hover .ql-fill { fill: #fff; }
     .notes-area .ql-container {
-      border: 1px solid #333;
+      border: 1px solid #e0e0e0;
       border-top: none;
       border-radius: 0 0 6px 6px;
-      background: #16213e;
+      background: #fff;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       font-size: 0.85rem;
-      color: #ccc;
+      color: #444;
       min-height: 60px;
     }
     .notes-area .ql-editor {
@@ -196,7 +194,7 @@
       padding: 8px;
     }
     .notes-area .ql-editor.ql-blank::before {
-      color: #555;
+      color: #aaa;
       font-style: normal;
     }
 
@@ -211,26 +209,28 @@
     .add-btn {
       flex: 1;
       padding: 12px;
-      border: 2px dashed #2a2a4a;
+      border: 2px dashed #ccc;
       border-radius: 10px;
       background: none;
-      color: #666;
+      color: #999;
       font-family: inherit;
       font-size: 0.9rem;
       cursor: pointer;
       transition: border-color 0.15s, color 0.15s;
     }
-    .add-btn:hover { border-color: #444; color: #aaa; }
+    .add-btn:hover { border-color: #999; color: #666; }
+    .archive-btn { border-color: #a0b4c8; color: #a0b4c8; }
+    .archive-btn:hover { border-color: #7a96b0; color: #7a96b0; }
 
     /* ---- Fullscreen toggle ---- */
     #fs-btn {
       position: fixed;
-      bottom: 12px;
+      top: 12px;
       right: 16px;
       background: none;
-      border: 1px solid #333;
+      border: 1px solid #ddd;
       border-radius: 6px;
-      color: #555;
+      color: #aaa;
       cursor: pointer;
       font-size: 1rem;
       padding: 6px 10px;
@@ -238,62 +238,63 @@
       transition: color 0.15s, border-color 0.15s;
       z-index: 100;
     }
-    #fs-btn:hover { color: #aaa; border-color: #555; }
+    #fs-btn:hover { color: #555; border-color: #999; }
 
-    /* ---- Auth bar ---- */
+    /* ---- Auth ---- */
     #auth-bar {
       position: fixed;
-      top: 0;
-      right: 0;
-      left: 0;
+      top: 12px;
+      left: 16px;
       display: flex;
-      justify-content: flex-end;
       align-items: center;
-      padding: 8px 16px;
       gap: 10px;
       z-index: 100;
-      background: rgba(26,26,46,0.85);
-      backdrop-filter: blur(6px);
     }
-    #auth-bar .user-name {
-      font-size: 0.82rem;
-      color: #8888aa;
-    }
-    #auth-bar button {
-      background: none;
-      border: 1px solid #444;
-      color: #ccc;
-      font-family: inherit;
-      font-size: 0.82rem;
-      padding: 5px 14px;
+    #sign-in-btn {
+      background: #fff;
+      border: 1px solid #ddd;
       border-radius: 6px;
+      color: #555;
       cursor: pointer;
+      font-family: inherit;
+      font-size: 0.85rem;
+      padding: 6px 14px;
       transition: border-color 0.15s, color 0.15s;
     }
-    #auth-bar button:hover { border-color: #888; color: #fff; }
-    #auth-bar .google-btn {
-      border-color: #4285f4;
-      color: #4285f4;
+    #sign-in-btn:hover { border-color: #999; color: #222; }
+    #user-info {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: #888;
     }
-    #auth-bar .google-btn:hover {
-      background: rgba(66,133,244,0.1);
-      color: #6ea5ff;
+    #user-info img {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
     }
-    #sync-status {
+    #sign-out-btn {
+      background: none;
+      border: none;
+      color: #aaa;
+      cursor: pointer;
       font-size: 0.75rem;
-      color: #555;
+      text-decoration: underline;
     }
+    #sign-out-btn:hover { color: #555; }
   </style>
 </head>
 <body>
 
 <div id="auth-bar">
-  <span id="sync-status"></span>
-  <span class="user-name" id="user-name"></span>
-  <button class="google-btn" id="sign-in-btn" onclick="signInWithGoogle()" style="display:none">Sign in with Google</button>
-  <button id="sign-out-btn" onclick="signOutUser()" style="display:none">Sign out</button>
+  <button id="sign-in-btn" onclick="signIn()">Sign in with Google</button>
+  <div id="user-info">
+    <img id="user-avatar" src="" alt="" />
+    <span id="user-name"></span>
+    <button id="sign-out-btn" onclick="signOut()">sign out</button>
+  </div>
 </div>
-
 <button id="fs-btn" onclick="toggleFullscreen()" title="Toggle fullscreen">&#x26F6;</button>
 <div id="clock">00:00:00</div>
 <div id="date"></div>
@@ -303,14 +304,11 @@
 <div id="add-row">
   <button class="add-btn" onclick="addTodo()">+ To-do</button>
   <button class="add-btn" onclick="addTimer()">+ Timer</button>
+  <button class="add-btn archive-btn" onclick="archiveAllChecked()">Archive Done</button>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-
 <script>
-// ──────────── Firebase Setup ────────────
+// ──────────── Firebase Init ────────────
 firebase.initializeApp({
   apiKey: "AIzaSyAl2npm6P_IXCM7HCjze9Agl9LRRJmP6cE",
   authDomain: "the-desk-b7e31.firebaseapp.com",
@@ -320,65 +318,38 @@ firebase.initializeApp({
   appId: "1:745170698598:web:6279f4856a4e35545888a7",
   measurementId: "G-Y7VRWY34E5"
 });
-
 const auth = firebase.auth();
 const db = firebase.firestore();
-
 let currentUser = null;
-let unsubFirestore = null;
-
-function setSyncStatus(msg) {
-  document.getElementById('sync-status').textContent = msg;
-  if (msg) setTimeout(() => {
-    const el = document.getElementById('sync-status');
-    if (el && el.textContent === msg) el.textContent = '';
-  }, 2000);
-}
 
 // ──────────── Auth ────────────
-function signInWithGoogle() {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).catch(err => console.error('Auth error:', err));
-}
+const provider = new firebase.auth.GoogleAuthProvider();
 
-function signOutUser() {
-  auth.signOut();
-}
+function signIn() { auth.signInWithPopup(provider); }
+function signOut() { auth.signOut(); }
 
 auth.onAuthStateChanged(user => {
   currentUser = user;
-  document.getElementById('sign-in-btn').style.display = user ? 'none' : '';
-  document.getElementById('sign-out-btn').style.display = user ? '' : 'none';
-  document.getElementById('user-name').textContent = user ? user.displayName : '';
-
-  // Clean up previous listener
-  if (unsubFirestore) { unsubFirestore(); unsubFirestore = null; }
-
+  const signInBtn = document.getElementById('sign-in-btn');
+  const userInfo = document.getElementById('user-info');
   if (user) {
-    // Load from Firestore & listen for changes
-    const docRef = db.collection('users').doc(user.uid);
-    unsubFirestore = docRef.onSnapshot(doc => {
-      if (doc.exists && doc.data().items) {
-        // Stop running timers before replacing state
-        items.forEach(i => { if (i._interval) stopInterval(i); });
-        items = doc.data().items;
-        renderAll();
-        resumeTimers();
-        setSyncStatus('Synced');
-      }
-    });
+    signInBtn.style.display = 'none';
+    userInfo.style.display = 'flex';
+    document.getElementById('user-avatar').src = user.photoURL || '';
+    document.getElementById('user-name').textContent = user.displayName || user.email;
+    loadItems();
   } else {
-    // Fall back to localStorage
-    items = JSON.parse(localStorage.getItem('desktop-items') || '[]');
+    signInBtn.style.display = '';
+    userInfo.style.display = 'none';
+    items = [];
     renderAll();
-    resumeTimers();
   }
 });
 
 // ──────────── Clock & Date ────────────
 function tickClock() {
   const now = new Date();
-  document.getElementById('clock').textContent = now.toLocaleTimeString('en-US', { hour12: false });
+  document.getElementById('clock').textContent = now.toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit' });
   const opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
   document.getElementById('date').textContent = now.toLocaleDateString('en-US', opts);
 }
@@ -387,29 +358,38 @@ setInterval(tickClock, 1000);
 
 // ──────────── State ────────────
 let items = [];
-
 let _saveTimeout = null;
+
 function save() {
-  const clean = items.map(i => ({
-    ...i,
-    _interval: undefined,
-    _lastTick: undefined,
-    _notesOpen: undefined,
-    _quill: undefined,
-  }));
+  if (!currentUser) return;
+  clearTimeout(_saveTimeout);
+  _saveTimeout = setTimeout(() => {
+    const data = items.map(i => ({
+      ...i,
+      _interval: undefined,
+      _lastTick: undefined,
+      _notesOpen: undefined,
+      _quill: undefined,
+    }));
+    db.collection('users').doc(currentUser.uid).set({ items: data }, { merge: true });
+  }, 500);
+}
 
-  // Always save to localStorage as backup
-  localStorage.setItem('desktop-items', JSON.stringify(clean));
-
-  // Debounced save to Firestore
-  if (currentUser) {
-    clearTimeout(_saveTimeout);
-    _saveTimeout = setTimeout(() => {
-      db.collection('users').doc(currentUser.uid).set({ items: clean }, { merge: true })
-        .then(() => setSyncStatus('Saved'))
-        .catch(err => { console.error('Firestore save error:', err); setSyncStatus('Save failed'); });
-    }, 500);
+async function loadItems() {
+  if (!currentUser) return;
+  try {
+    const doc = await db.collection('users').doc(currentUser.uid).get();
+    if (doc.exists && doc.data().items) {
+      items = doc.data().items;
+    } else {
+      items = [];
+    }
+  } catch (e) {
+    console.error('Load error:', e);
+    items = [];
   }
+  renderAll();
+  resumeTimers();
 }
 
 // ──────────── Rendering ────────────
@@ -428,7 +408,7 @@ function renderTodo(item, idx) {
       <button class="btn check-btn ${item.checked ? 'checked' : ''}" title="Toggle">${item.checked ? '&#10003;' : '&#9675;'}</button>
       <input class="item-label" value="${esc(item.label)}" placeholder="To-do..." />
       <button class="btn notes-toggle ${hasNotes(item) ? 'has-notes' : ''}" title="Notes">&#9660;</button>
-      <button class="btn" title="Delete">&#10005;</button>
+      <button class="btn" title="Archive">&#10005;</button>
     </div>
     <div class="notes-area ${item._notesOpen ? 'open' : ''}">
       <div class="quill-editor"></div>
@@ -437,7 +417,7 @@ function renderTodo(item, idx) {
   row.querySelector('.check-btn').onclick = () => { item.checked = !item.checked; save(); renderAll(); };
   row.querySelector('.item-label').addEventListener('input', e => { item.label = e.target.value; save(); });
   row.querySelector('.notes-toggle').onclick = () => { item._notesOpen = !item._notesOpen; renderAll(); };
-  row.querySelector('.item-content > .btn:last-child').onclick = () => { removeItem(idx); };
+  row.querySelector('.item-content > .btn:last-child').onclick = () => { archiveItem(idx); };
   if (item._notesOpen) initQuill(row, item);
   return row;
 }
@@ -463,19 +443,23 @@ function initQuill(row, item) {
       ]
     }
   });
+  // Load content: support legacy plain text or Quill delta JSON
   if (item.notes) {
     try {
       const delta = JSON.parse(item.notes);
       if (delta.ops) { quill.setContents(delta); }
       else { quill.setText(item.notes); }
     } catch {
+      // legacy plain text
       quill.setText(item.notes);
     }
   }
+  // Save on change
   let saveTimer = null;
   quill.on('text-change', () => {
     item.notes = JSON.stringify(quill.getContents());
     updateNotesToggle(row, item);
+    // debounce saves
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => save(), 500);
   });
@@ -506,14 +490,16 @@ function renderTimer(item, idx) {
       <button class="btn" title="${item.running ? 'Pause' : 'Start'}">${item.running ? '&#9646;&#9646;' : '&#9654;'}</button>
       <button class="btn" title="Reset">&#8634;</button>
       <button class="btn notes-toggle ${hasNotes(item) ? 'has-notes' : ''}" title="Notes">&#9660;</button>
-      <button class="btn" title="Delete">&#10005;</button>
+      <button class="btn" title="Archive">&#10005;</button>
     </div>
     <div class="notes-area ${item._notesOpen ? 'open' : ''}">
       <div class="quill-editor"></div>
     </div>`;
 
+  // label edit
   row.querySelector('.item-label').addEventListener('input', e => { item.label = e.target.value; save(); });
 
+  // elapsed time edit
   row.querySelector('.elapsed-input').addEventListener('change', e => {
     const s = parseTime(e.target.value);
     if (s !== null) {
@@ -522,19 +508,25 @@ function renderTimer(item, idx) {
     }
   });
 
+  // total time edit
   row.querySelector('.time-input:not(.elapsed-input)').addEventListener('change', e => {
     const s = parseTime(e.target.value);
     if (s !== null) { item.totalSeconds = s; save(); renderAll(); }
   });
 
+  // notes
   row.querySelector('.notes-toggle').onclick = () => { item._notesOpen = !item._notesOpen; renderAll(); };
   if (item._notesOpen) initQuill(row, item);
 
   const btns = row.querySelectorAll('.item-content > .btn');
+  // check / done
   btns[0].onclick = () => { if (done) { item.elapsed = 0; item.running = false; stopInterval(item); save(); renderAll(); } };
+  // play / pause
   btns[1].onclick = () => { toggleTimer(item, idx); };
+  // reset
   btns[2].onclick = () => { item.elapsed = 0; item.running = false; stopInterval(item); save(); renderAll(); };
-  btns[4].onclick = () => { stopInterval(item); removeItem(idx); };
+  // archive
+  btns[4].onclick = () => { stopInterval(item); archiveItem(idx); };
 
   return row;
 }
@@ -542,7 +534,7 @@ function renderTimer(item, idx) {
 // ──────────── Bell sound ────────────
 function playBell() {
   const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  const frequencies = [523.25, 659.25, 783.99];
+  const frequencies = [523.25, 659.25, 783.99]; // C5, E5, G5
   frequencies.forEach((freq, i) => {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -558,8 +550,8 @@ function playBell() {
 }
 
 // ──────────── Timer engine ────────────
-const TICK = 250;
-const SAVE_INTERVAL = 5000;
+const TICK = 250; // ms
+const SAVE_INTERVAL = 5000; // auto-save every 5 seconds while a timer runs
 let _autoSaveInterval = null;
 
 function ensureAutoSave() {
@@ -592,6 +584,7 @@ function startInterval(item, idx) {
       playBell();
       return;
     }
+    // Update bar + display without full re-render
     const row = listEl.children[items.indexOf(item)];
     if (!row) return;
     const pct = (item.elapsed / item.totalSeconds) * 100;
@@ -616,6 +609,7 @@ function toggleTimer(item, idx) {
   renderAll();
 }
 
+// Resume any running timers on load
 function resumeTimers() {
   items.forEach((item, idx) => {
     if (item.type === 'timer' && item.running) {
@@ -639,7 +633,7 @@ function parseTime(str) {
   if (parts.some(isNaN)) return null;
   if (parts.length === 3) return parts[0]*3600 + parts[1]*60 + parts[2];
   if (parts.length === 2) return parts[0]*60 + parts[1];
-  if (parts.length === 1) return parts[0]*60;
+  if (parts.length === 1) return parts[0]*60; // treat bare number as minutes
   return null;
 }
 
@@ -666,10 +660,31 @@ function addTimer() {
   listEl.querySelector('.item:last-of-type .item-label').focus();
 }
 
-function removeItem(idx) {
+function archiveItem(idx) {
   const item = items.splice(idx, 1)[0];
-  if (item._interval) stopInterval(item);
+  stopInterval(item);
+  const archived = { ...item, _interval: undefined, _lastTick: undefined, _notesOpen: undefined, _quill: undefined, archivedAt: new Date().toISOString() };
+  saveArchive([archived]);
   save(); renderAll();
+}
+
+function archiveAllChecked() {
+  const isDone = i => (i.type === 'todo' && i.checked) || (i.type === 'timer' && i.totalSeconds > 0 && i.elapsed >= i.totalSeconds);
+  const done = items.filter(isDone);
+  if (done.length === 0) return;
+  done.forEach(i => { if (i._interval) stopInterval(i); });
+  const toArchive = done.map(i => ({
+    ...i, _interval: undefined, _lastTick: undefined, _notesOpen: undefined, _quill: undefined, archivedAt: new Date().toISOString()
+  }));
+  saveArchive(toArchive);
+  items = items.filter(i => !isDone(i));
+  save(); renderAll();
+}
+
+function saveArchive(archivedItems) {
+  if (!currentUser) return;
+  const ref = db.collection('users').doc(currentUser.uid).collection('archive');
+  archivedItems.forEach(item => ref.add(item));
 }
 
 // ──────────── Drag & Drop reorder ────────────
@@ -689,6 +704,7 @@ function renderAll() {
   items.forEach((item, idx) => {
     listEl.appendChild(item.type === 'timer' ? renderTimer(item, idx) : renderTodo(item, idx));
   });
+  // attach drag listeners to the list container
   setupDragOnList();
 }
 
@@ -700,6 +716,7 @@ function setupDragOnList() {
     row.addEventListener('dragstart', e => {
       dragIdx = Number(row.dataset.idx);
       e.dataTransfer.effectAllowed = 'move';
+      // small delay so browser captures the ghost image first
       requestAnimationFrame(() => row.classList.add('dragging'));
     });
 
@@ -712,6 +729,7 @@ function setupDragOnList() {
     });
   });
 
+  // Use the list container for dragover/drop so the indicator works between items
   listEl.ondragover = e => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
@@ -738,6 +756,7 @@ function setupDragOnList() {
   };
 
   listEl.ondragleave = e => {
+    // only hide if leaving the list entirely
     if (!listEl.contains(e.relatedTarget)) {
       const ind = getDropIndicator();
       ind.classList.remove('visible');
@@ -750,8 +769,9 @@ function setupDragOnList() {
     ind.classList.remove('visible');
     if (dragIdx === null) return;
 
+    // figure out where the indicator is
     const children = [...listEl.querySelectorAll('.item')];
-    let dropIdx = children.length;
+    let dropIdx = children.length; // default: end
     for (let i = 0; i < children.length; i++) {
       const rect = children[i].getBoundingClientRect();
       if (e.clientY < rect.top + rect.height / 2) {
@@ -760,6 +780,7 @@ function setupDragOnList() {
       }
     }
 
+    // adjust for the fact we're removing from the original position
     const [moved] = items.splice(dragIdx, 1);
     const insertAt = dropIdx > dragIdx ? dropIdx - 1 : dropIdx;
     items.splice(insertAt, 0, moved);
@@ -782,8 +803,7 @@ document.addEventListener('fullscreenchange', () => {
 });
 
 // ──────────── Init ────────────
-renderAll();
-resumeTimers();
+loadItems();
 </script>
 </body>
 </html>
