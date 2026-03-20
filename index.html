@@ -742,9 +742,13 @@ function setupDragOnList() {
     row.setAttribute('draggable', true);
 
     row.addEventListener('dragstart', e => {
+      // Don't drag when clicking buttons or inputs
+      if (e.target.closest('button, input, .notes-area')) {
+        e.preventDefault();
+        return;
+      }
       dragIdx = Number(row.dataset.idx);
       e.dataTransfer.effectAllowed = 'move';
-      // small delay so browser captures the ghost image first
       requestAnimationFrame(() => row.classList.add('dragging'));
     });
 
