@@ -445,7 +445,7 @@ function renderTodo(item, idx) {
       <button class="btn check-btn ${item.checked ? 'checked' : ''}" title="Toggle">${item.checked ? '&#10003;' : '&#9675;'}</button>
       <input class="item-label" value="${esc(item.label)}" placeholder="To-do..." />
       <button class="btn notes-toggle ${hasNotes(item) ? 'has-notes' : ''}" title="Notes">&#9660;</button>
-      <button class="btn" title="Archive">&#10005;</button>
+      <button class="btn delete-btn" title="Delete">&#10005;</button>
     </div>
     <div class="notes-area ${item._notesOpen ? 'open' : ''}">
       <div class="quill-editor"></div>
@@ -454,7 +454,7 @@ function renderTodo(item, idx) {
   row.querySelector('.check-btn').onclick = () => { item.checked = !item.checked; save(); renderAll(); };
   row.querySelector('.item-label').addEventListener('input', e => { item.label = e.target.value; save(); });
   row.querySelector('.notes-toggle').onclick = () => { item._notesOpen = !item._notesOpen; renderAll(); };
-  row.querySelector('.item-content > .btn:last-child').onclick = () => { archiveItem(idx); };
+  row.querySelector('.delete-btn').onclick = () => { archiveItem(idx); };
   if (item._notesOpen) initQuill(row, item);
   return row;
 }
@@ -527,16 +527,14 @@ function renderTimer(item, idx) {
       <button class="btn" title="${item.running ? 'Pause' : 'Start'}">${item.running ? '&#9646;&#9646;' : '&#9654;'}</button>
       <button class="btn" title="Reset">&#8634;</button>
       <button class="btn notes-toggle ${hasNotes(item) ? 'has-notes' : ''}" title="Notes">&#9660;</button>
-      <button class="btn" title="Archive">&#10005;</button>
+      <button class="btn delete-btn" title="Delete">&#10005;</button>
     </div>
     <div class="notes-area ${item._notesOpen ? 'open' : ''}">
       <div class="quill-editor"></div>
     </div>`;
 
-  // label edit
   row.querySelector('.item-label').addEventListener('input', e => { item.label = e.target.value; save(); });
 
-  // elapsed time edit
   row.querySelector('.elapsed-input').addEventListener('change', e => {
     const s = parseTime(e.target.value);
     if (s !== null) {
@@ -545,25 +543,18 @@ function renderTimer(item, idx) {
     }
   });
 
-  // total time edit
   row.querySelector('.time-input:not(.elapsed-input)').addEventListener('change', e => {
     const s = parseTime(e.target.value);
     if (s !== null) { item.totalSeconds = s; save(); renderAll(); }
   });
 
-  // notes
   row.querySelector('.notes-toggle').onclick = () => { item._notesOpen = !item._notesOpen; renderAll(); };
   if (item._notesOpen) initQuill(row, item);
 
-  const btns = row.querySelectorAll('.item-content > .btn');
-  // check / done
-  btns[0].onclick = () => { if (done) { item.elapsed = 0; item.running = false; stopInterval(item); save(); renderAll(); } };
-  // play / pause
-  btns[1].onclick = () => { toggleTimer(item, idx); };
-  // reset
-  btns[2].onclick = () => { item.elapsed = 0; item.running = false; stopInterval(item); save(); renderAll(); };
-  // archive
-  btns[4].onclick = () => { stopInterval(item); archiveItem(idx); };
+  row.querySelector('.check-btn').onclick = () => { if (done) { item.elapsed = 0; item.running = false; stopInterval(item); save(); renderAll(); } };
+  row.querySelector('.btn[title="Start"], .btn[title="Pause"]').onclick = () => { toggleTimer(item, idx); };
+  row.querySelector('.btn[title="Reset"]').onclick = () => { item.elapsed = 0; item.running = false; stopInterval(item); save(); renderAll(); };
+  row.querySelector('.delete-btn').onclick = () => { stopInterval(item); archiveItem(idx); };
 
   return row;
 }
