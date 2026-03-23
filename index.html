@@ -227,6 +227,11 @@
     .add-btn:hover { border-color: #999; color: #666; }
     .archive-btn { border-color: #a0b4c8; color: #a0b4c8; }
     .archive-btn:hover { border-color: #7a96b0; color: #7a96b0; }
+    .voice-btn { border-color: #c8a0a0; color: #c8a0a0; }
+    .voice-btn:hover { border-color: #b07a7a; color: #b07a7a; }
+    .voice-btn.recording { border-color: #e74c3c; color: #e74c3c; border-style: solid; animation: pulse-border 1s infinite; }
+    @keyframes pulse-border { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    #voice-status { width: 100%; max-width: 640px; text-align: center; font-size: 0.85rem; color: #888; margin-top: 6px; min-height: 1.2em; }
 
     /* ---- Fullscreen toggle ---- */
     #fs-btn {
@@ -317,10 +322,12 @@
 <div id="list"></div>
 
 <div id="add-row">
+  <button class="add-btn voice-btn" id="voice-btn" onclick="toggleVoice()">+ Voice</button>
   <button class="add-btn" onclick="addTodo()">+ To-do</button>
   <button class="add-btn" onclick="addTimer()">+ Timer</button>
   <button class="add-btn archive-btn" onclick="archiveAllChecked()">Archive Done</button>
 </div>
+<div id="voice-status"></div>
 
 <script>
 // ──────────── Firebase Init ────────────
@@ -845,6 +852,72 @@ function toggleFullscreen() {
 document.addEventListener('fullscreenchange', () => {
   document.getElementById('fs-btn').innerHTML = document.fullscreenElement ? '&#x2715;' : '&#x26F6;';
 });
+
+// ──────────── Voice Recording ────────────
+let mediaRecorder = null;
+let audioChunks = [];
+const voiceBtn = document.getElementById('voice-btn');
+const voiceStatus = document.getElementById('voice-status');
+
+function toggleVoice() {
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    stopVoice();
+  } else {
+    startVoice();
+  }
+}
+
+async function startVoice() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioChunks = [];
+    mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+    mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
+    mediaRecorder.onstop = () => {
+      stream.getTracks().forEach(t => t.stop());
+      sendVoice(new Blob(audioChunks, { type: 'audio/webm' }));
+    };
+    mediaRecorder.start();
+    voiceBtn.textContent = 'Stop';
+    voiceBtn.classList.add('recording');
+    voiceStatus.textContent = 'Recording...';
+  } catch (err) {
+    voiceStatus.textContent = 'Mic access denied';
+    console.error('Mic error:', err);
+  }
+}
+
+function stopVoice() {
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    mediaRecorder.stop();
+    voiceBtn.textContent = '+ Voice';
+    voiceBtn.classList.remove('recording');
+    voiceStatus.textContent = 'Processing...';
+  }
+}
+
+async function sendVoice(blob) {
+  try {
+    const form = new FormData();
+    form.append('audio', blob, 'recording.webm');
+    const resp = await fetch('/api/voice', { method: 'POST', body: form });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    if (data.tasks && data.tasks.length > 0) {
+      data.tasks.forEach(t => items.push(t));
+      save();
+      renderAll();
+      voiceStatus.textContent = `Added ${data.tasks.length} task${data.tasks.length > 1 ? 's' : ''}`;
+    } else {
+      voiceStatus.textContent = 'No tasks found in recording';
+    }
+    setTimeout(() => { voiceStatus.textContent = ''; }, 3000);
+  } catch (err) {
+    voiceStatus.textContent = 'Error: ' + err.message;
+    console.error('Voice error:', err);
+    setTimeout(() => { voiceStatus.textContent = ''; }, 5000);
+  }
+}
 
 // ──────────── Init ────────────
 loadItems();
