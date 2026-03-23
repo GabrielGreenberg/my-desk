@@ -1,0 +1,9 @@
+{
+  "buildCommand": "",
+  "outputDirectory": ".",
+  "functions": {
+    "api/voice.py": {
+      "maxDuration": 30
+    }
+  }
+}

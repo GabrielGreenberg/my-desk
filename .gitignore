@@ -2,3 +2,5 @@
 .DS_Store
 data.json
 archive.json
+node_modules/
+.vercel/
