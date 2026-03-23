@@ -1,10 +1,12 @@
-const CACHE_NAME = 'my-desk-v1';
+const CACHE_NAME = 'my-desk-v2';
 
 // App shell resources to pre-cache
 const APP_SHELL = [
   '/',
   '/index.html',
   '/icon.svg',
+  '/icon-192.png',
+  '/icon-512.png',
   '/manifest.json',
   'https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css',
   'https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js',
