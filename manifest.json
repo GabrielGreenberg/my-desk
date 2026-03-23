@@ -2,7 +2,7 @@
   "name": "My Desk",
   "short_name": "My Desk",
   "description": "A minimal desktop dashboard with clock, tasks, and notes",
-  "start_url": "/",
+  "start_url": ".",
   "display": "standalone",
   "background_color": "#f5f5f7",
   "theme_color": "#f5f5f7",
