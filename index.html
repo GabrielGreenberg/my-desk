@@ -210,27 +210,27 @@
       width: 100%;
       max-width: 640px;
       display: flex;
-      gap: 10px;
+      gap: 8px;
       margin-top: 16px;
     }
     .add-btn {
       flex: 1;
-      padding: 12px;
-      border: 2px dashed #ccc;
-      border-radius: 10px;
+      padding: 6px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
       background: none;
       color: #999;
       font-family: inherit;
-      font-size: 0.9rem;
+      font-size: 0.8rem;
       cursor: pointer;
       transition: border-color 0.15s, color 0.15s;
     }
-    .add-btn:hover { border-color: #999; color: #666; }
+    .add-btn:hover { border-color: #999; color: #555; }
     .archive-btn { border-color: #a0b4c8; color: #a0b4c8; }
     .archive-btn:hover { border-color: #7a96b0; color: #7a96b0; }
     .voice-btn { border-color: #c8a0a0; color: #c8a0a0; }
     .voice-btn:hover { border-color: #b07a7a; color: #b07a7a; }
-    .voice-btn.recording { border-color: #e74c3c; color: #e74c3c; border-style: solid; animation: pulse-border 1s infinite; }
+    .voice-btn.recording { border-color: #e74c3c; color: #e74c3c; animation: pulse-border 1s infinite; }
     @keyframes pulse-border { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
     #voice-status { width: 100%; max-width: 640px; text-align: center; font-size: 0.85rem; color: #888; margin-top: 6px; min-height: 1.2em; }
 
@@ -511,7 +511,7 @@
   <button class="add-btn voice-btn" id="voice-btn" onclick="toggleVoice()">+ Voice</button>
   <button class="add-btn" onclick="addTodo()">+ To-do</button>
   <button class="add-btn" onclick="addTimer()">+ Timer</button>
-  <button class="add-btn archive-btn" onclick="archiveAllChecked()">Archive Done</button>
+  <button class="add-btn archive-btn" onclick="archiveAllChecked()">Archive</button>
 </div>
 <div id="voice-status"></div>
 
@@ -524,9 +524,9 @@
     <div class="notion-actions" id="notion-actions">
       <span id="notion-status"></span>
       <button class="notion-action-btn voice" id="notion-voice-btn" onclick="toggleNotionVoice()">+ Voice</button>
-      <button class="notion-action-btn" onclick="loadNotionTasks()">↻ Refresh</button>
       <button class="notion-action-btn" onclick="toggleNotionNew()">+ New</button>
-      <button class="notion-action-btn archive" onclick="notionArchiveAllDone()">Archive Done</button>
+      <button class="notion-action-btn" onclick="loadNotionTasks()">↻ Refresh</button>
+      <button class="notion-action-btn archive" onclick="notionArchiveAllDone()">Archive</button>
     </div>
   </div>
   <div id="notion-body">
