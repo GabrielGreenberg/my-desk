@@ -27,8 +27,11 @@ def list_tasks():
     """Query the database for active (non-completed) tasks."""
     body = {
         "filter": {
-            "property": "Status",
-            "status": {"does_not_equal": "Completed"}
+            "or": [
+                {"property": "Status", "status": {"equals": "Not started"}},
+                {"property": "Status", "status": {"equals": "In progress"}},
+                {"property": "Status", "status": {"equals": "To Do"}},
+            ]
         },
         "sorts": [
             {"property": "Due", "direction": "ascending"},
@@ -41,7 +44,7 @@ def list_tasks():
     for page in result.get("results", []):
         props = page["properties"]
         # Extract title
-        title_prop = props.get("Task", props.get("Name", {}))
+        title_prop = props.get("Task name", props.get("Task", props.get("Name", {})))
         title = ""
         if title_prop.get("title"):
             title = "".join(t.get("plain_text", "") for t in title_prop["title"])
@@ -69,7 +72,7 @@ def list_tasks():
 def create_task(title, due=None):
     """Create a new task in the database."""
     properties = {
-        "Task": {"title": [{"text": {"content": title}}]},
+        "Task name": {"title": [{"text": {"content": title}}]},
         "Status": {"status": {"name": "To Do"}},
     }
     if due:
@@ -87,7 +90,7 @@ def update_task(page_id, updates):
     """Update a task's properties."""
     properties = {}
     if "title" in updates:
-        properties["Task"] = {"title": [{"text": {"content": updates["title"]}}]}
+        properties["Task name"] = {"title": [{"text": {"content": updates["title"]}}]}
     if "status" in updates:
         properties["Status"] = {"status": {"name": updates["status"]}}
     if "due" in updates:
@@ -131,7 +134,7 @@ class handler(BaseHTTPRequestHandler):
                 result = archive_task(body["id"])
                 self._send_json(result)
             elif action == "complete":
-                result = update_task(body["id"], {"status": "Completed"})
+                result = update_task(body["id"], {"status": "Done"})
                 self._send_json(result)
             else:
                 self._send_json({"error": f"Unknown action: {action}"}, 400)
