@@ -102,27 +102,81 @@ def complete_task(page_id):
     return {"ok": True}
 
 
+def _rich_text_html(rich_text_arr):
+    """Convert Notion rich_text array to HTML."""
+    parts = []
+    for rt in rich_text_arr:
+        text = rt.get("plain_text", "")
+        if not text:
+            continue
+        text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        ann = rt.get("annotations", {})
+        if ann.get("code"):
+            text = f"<code>{text}</code>"
+        if ann.get("bold"):
+            text = f"<strong>{text}</strong>"
+        if ann.get("italic"):
+            text = f"<em>{text}</em>"
+        if ann.get("underline"):
+            text = f"<u>{text}</u>"
+        if ann.get("strikethrough"):
+            text = f"<s>{text}</s>"
+        color = ann.get("color", "default")
+        if color != "default":
+            if color.endswith("_background"):
+                text = f'<span style="background:{color.replace("_background","")}">{text}</span>'
+            else:
+                text = f'<span style="color:{color}">{text}</span>'
+        href = rt.get("href")
+        if href:
+            text = f'<a href="{href}" target="_blank">{text}</a>'
+        parts.append(text)
+    return "".join(parts)
+
+
 def get_content(page_id):
-    """Get the text content of a Notion page."""
+    """Get the HTML content of a Notion page."""
     result = notion_request("GET", f"https://api.notion.com/v1/blocks/{page_id}/children")
-    lines = []
+    html_parts = []
     for block in result.get("results", []):
         btype = block.get("type", "")
         bdata = block.get(btype, {})
         rich_text = bdata.get("rich_text", [])
-        text = "".join(t.get("plain_text", "") for t in rich_text)
+        text = _rich_text_html(rich_text)
         if btype == "to_do":
             checked = bdata.get("checked", False)
-            lines.append(f"{'[x]' if checked else '[ ]'} {text}")
-        elif btype in ("heading_1", "heading_2", "heading_3"):
-            lines.append(text)
+            icon = "☑" if checked else "☐"
+            style = ' style="color:#999;text-decoration:line-through"' if checked else ''
+            html_parts.append(f'<div{style}>{icon} {text}</div>')
+        elif btype == "heading_1":
+            html_parts.append(f"<h3>{text}</h3>")
+        elif btype == "heading_2":
+            html_parts.append(f"<h4>{text}</h4>")
+        elif btype == "heading_3":
+            html_parts.append(f"<h5>{text}</h5>")
         elif btype == "bulleted_list_item":
-            lines.append(f"• {text}")
+            html_parts.append(f"<div>• {text}</div>")
         elif btype == "numbered_list_item":
-            lines.append(f"- {text}")
+            html_parts.append(f"<div>‣ {text}</div>")
+        elif btype == "quote":
+            html_parts.append(f'<blockquote style="border-left:3px solid #ddd;padding-left:10px;color:#666;margin:4px 0">{text}</blockquote>')
+        elif btype == "code":
+            lang = bdata.get("language", "")
+            html_parts.append(f'<pre style="background:#f5f5f5;padding:8px;border-radius:4px;font-size:0.8rem;overflow-x:auto"><code>{text}</code></pre>')
+        elif btype == "divider":
+            html_parts.append('<hr style="border:none;border-top:1px solid #e0e0e0;margin:8px 0">')
+        elif btype == "callout":
+            emoji = bdata.get("icon", {}).get("emoji", "💡")
+            html_parts.append(f'<div style="background:#f9f9f9;border-radius:6px;padding:8px 12px;margin:4px 0">{emoji} {text}</div>')
+        elif btype == "toggle":
+            html_parts.append(f"<details><summary>{text}</summary></details>")
+        elif btype == "image":
+            url = bdata.get("file", bdata.get("external", {})).get("url", "")
+            if url:
+                html_parts.append(f'<img src="{url}" style="max-width:100%;border-radius:4px;margin:4px 0" />')
         elif text:
-            lines.append(text)
-    return "\n".join(lines)
+            html_parts.append(f"<div>{text}</div>")
+    return "\n".join(html_parts)
 
 
 def archive_task(page_id):
