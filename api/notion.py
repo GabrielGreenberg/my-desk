@@ -5,7 +5,7 @@ from http.server import BaseHTTPRequestHandler
 import urllib.request
 
 NOTION_TOKEN = os.environ.get("NOTION_TOKEN", "")
-DATABASE_ID = "9b491202-7c21-4a10-b03f-788c1cd82277"
+DATABASE_ID = "24d95563-22a9-484f-9db0-e93d9bbca600"
 NOTION_VERSION = "2022-06-28"
 
 HEADERS = {
@@ -16,7 +16,6 @@ HEADERS = {
 
 
 def notion_request(method, url, body=None):
-    """Make a request to the Notion API."""
     data = json.dumps(body).encode() if body else None
     req = urllib.request.Request(url, data=data, headers=HEADERS, method=method)
     with urllib.request.urlopen(req, timeout=15) as resp:
@@ -24,13 +23,11 @@ def notion_request(method, url, body=None):
 
 
 def list_tasks():
-    """Query the database for active (non-completed) tasks."""
     body = {
         "filter": {
             "or": [
-                {"property": "Status", "status": {"equals": "Not started"}},
-                {"property": "Status", "status": {"equals": "In progress"}},
-                {"property": "Status", "status": {"equals": "To Do"}},
+                {"property": "Done", "status": {"equals": "Not started"}},
+                {"property": "Done", "status": {"equals": "In progress"}},
             ]
         },
         "sorts": [
@@ -43,18 +40,18 @@ def list_tasks():
     tasks = []
     for page in result.get("results", []):
         props = page["properties"]
-        # Extract title
-        title_prop = props.get("Task name", props.get("Task", props.get("Name", {})))
+        # Title from "Task" property
+        title_prop = props.get("Task", {})
         title = ""
         if title_prop.get("title"):
             title = "".join(t.get("plain_text", "") for t in title_prop["title"])
 
-        # Extract status
+        # Status from "Done" property
         status = ""
-        if props.get("Status", {}).get("status"):
-            status = props["Status"]["status"].get("name", "")
+        if props.get("Done", {}).get("status"):
+            status = props["Done"]["status"].get("name", "")
 
-        # Extract due date
+        # Due date
         due = None
         if props.get("Due", {}).get("date"):
             due = props["Due"]["date"].get("start")
@@ -70,47 +67,36 @@ def list_tasks():
 
 
 def create_task(title, due=None):
-    """Create a new task in the database."""
     properties = {
-        "Task name": {"title": [{"text": {"content": title}}]},
-        "Status": {"status": {"name": "To Do"}},
+        "Task": {"title": [{"text": {"content": title}}]},
+        "Done": {"status": {"name": "Not started"}},
     }
     if due:
         properties["Due"] = {"date": {"start": due}}
-
-    body = {
-        "parent": {"database_id": DATABASE_ID},
-        "properties": properties,
-    }
+    body = {"parent": {"database_id": DATABASE_ID}, "properties": properties}
     result = notion_request("POST", "https://api.notion.com/v1/pages", body)
-    return {"id": result["id"], "title": title, "status": "To Do", "due": due}
+    return {"id": result["id"], "title": title, "status": "Not started", "due": due}
 
 
 def update_task(page_id, updates):
-    """Update a task's properties."""
     properties = {}
     if "title" in updates:
-        properties["Task name"] = {"title": [{"text": {"content": updates["title"]}}]}
+        properties["Task"] = {"title": [{"text": {"content": updates["title"]}}]}
     if "status" in updates:
-        properties["Status"] = {"status": {"name": updates["status"]}}
+        properties["Done"] = {"status": {"name": updates["status"]}}
     if "due" in updates:
         properties["Due"] = {"date": {"start": updates["due"]} if updates["due"] else None}
-
-    body = {"properties": properties}
-    notion_request("PATCH", f"https://api.notion.com/v1/pages/{page_id}", body)
+    notion_request("PATCH", f"https://api.notion.com/v1/pages/{page_id}", {"properties": properties})
     return {"ok": True}
 
 
 def archive_task(page_id):
-    """Archive (soft-delete) a task."""
-    body = {"archived": True}
-    notion_request("PATCH", f"https://api.notion.com/v1/pages/{page_id}", body)
+    notion_request("PATCH", f"https://api.notion.com/v1/pages/{page_id}", {"archived": True})
     return {"ok": True}
 
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
-        """GET /api/notion → list tasks"""
         try:
             tasks = list_tasks()
             self._send_json({"tasks": tasks})
@@ -118,7 +104,6 @@ class handler(BaseHTTPRequestHandler):
             self._send_json({"error": str(e)}, 500)
 
     def do_POST(self):
-        """POST /api/notion → create or update task"""
         try:
             content_length = int(self.headers.get("Content-Length", 0))
             body = json.loads(self.rfile.read(content_length)) if content_length > 0 else {}
