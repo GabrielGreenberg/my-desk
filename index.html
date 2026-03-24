@@ -328,7 +328,7 @@
       gap: 8px;
       align-items: center;
     }
-    #notion-refresh-btn, #notion-add-btn {
+    #notion-refresh-btn, #notion-add-btn, #notion-archive-btn {
       background: none;
       border: 1px solid #ddd;
       border-radius: 6px;
@@ -339,7 +339,9 @@
       font-family: inherit;
       transition: color 0.15s, border-color 0.15s;
     }
-    #notion-refresh-btn:hover, #notion-add-btn:hover { color: #555; border-color: #999; }
+    #notion-refresh-btn:hover, #notion-add-btn:hover, #notion-archive-btn:hover { color: #555; border-color: #999; }
+    #notion-archive-btn { border-color: #a0b4c8; color: #a0b4c8; }
+    #notion-archive-btn:hover { border-color: #7a96b0; color: #7a96b0; }
     #notion-status { font-size: 0.75rem; color: #aaa; }
 
     #notion-list {
@@ -357,7 +359,9 @@
       gap: 10px;
       transition: opacity 0.2s;
     }
-    .notion-task.completed { opacity: 0.5; }
+    .notion-task.completed { opacity: 0.5; text-decoration: line-through; }
+    .notion-task.checked-done { background: #f0faf0; }
+    .notion-task.checked-done .nt-title { color: #888; }
     .notion-task .nt-check {
       background: none;
       border: none;
@@ -455,6 +459,7 @@
     <div class="notion-actions">
       <span id="notion-status"></span>
       <button id="notion-refresh-btn" onclick="loadNotionTasks()">↻ Refresh</button>
+      <button id="notion-archive-btn" onclick="notionArchiveAllDone()">Archive Done</button>
       <button id="notion-add-btn" onclick="toggleNotionNew()">+ New</button>
     </div>
   </div>
@@ -1084,20 +1089,20 @@ function renderNotionTasks() {
   }
   notionTasks.forEach(task => {
     const row = document.createElement('div');
-    row.className = 'notion-task' + (task.status === 'Completed' ? ' completed' : '');
+    const isDone = task.doneStatus === 'Done';
+    row.className = 'notion-task' + (isDone ? ' checked-done' : '');
 
-    const isDone = task.status === 'Completed';
     const dueStr = task.due ? formatDue(task.due) : '';
     const isOverdue = task.due && new Date(task.due) < new Date() && !isDone;
 
     row.innerHTML = `
-      <button class="nt-check ${isDone ? 'done' : ''}" title="Complete">${isDone ? '✓' : '○'}</button>
+      <button class="nt-check ${isDone ? 'done' : ''}" title="${isDone ? 'Uncheck' : 'Mark done'}">${isDone ? '✓' : '○'}</button>
       <input class="nt-title" value="${esc(task.title)}" />
       ${dueStr ? `<span class="nt-due ${isOverdue ? 'overdue' : ''}">${dueStr}</span>` : ''}
-      <button class="nt-archive" title="Archive">✕</button>
+      <button class="nt-archive" title="Remove">✕</button>
     `;
 
-    row.querySelector('.nt-check').onclick = () => notionComplete(task);
+    row.querySelector('.nt-check').onclick = () => notionToggleDone(task);
     row.querySelector('.nt-archive').onclick = () => notionArchive(task, row);
 
     let titleTimer = null;
@@ -1122,18 +1127,42 @@ function formatDue(dateStr) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-async function notionComplete(task) {
+async function notionToggleDone(task) {
+  const newStatus = task.doneStatus === 'Done' ? 'Not started' : 'Done';
+  task.doneStatus = newStatus; // optimistic update
+  renderNotionTasks();
   try {
     await fetch('/api/notion', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'complete', id: task.id })
+      body: JSON.stringify({ action: 'update', id: task.id, updates: { status: newStatus } })
     });
-    // Remove from local list
-    notionTasks = notionTasks.filter(t => t.id !== task.id);
-    renderNotionTasks();
   } catch (err) {
-    console.error('Notion complete error:', err);
+    console.error('Notion toggle error:', err);
+    task.doneStatus = newStatus === 'Done' ? 'Not started' : 'Done'; // revert
+    renderNotionTasks();
+  }
+}
+
+async function notionArchiveAllDone() {
+  const doneTasks = notionTasks.filter(t => t.doneStatus === 'Done');
+  if (doneTasks.length === 0) return;
+  notionStatusEl.textContent = `Archiving ${doneTasks.length}...`;
+  try {
+    await Promise.all(doneTasks.map(task =>
+      fetch('/api/notion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'complete', id: task.id })
+      })
+    ));
+    notionTasks = notionTasks.filter(t => t.doneStatus !== 'Done');
+    renderNotionTasks();
+    notionStatusEl.textContent = '';
+  } catch (err) {
+    console.error('Notion archive all error:', err);
+    notionStatusEl.textContent = 'Error archiving';
+    setTimeout(() => { notionStatusEl.textContent = ''; }, 3000);
   }
 }
 

@@ -161,7 +161,7 @@ def notion_list_tasks():
         due = None
         if props.get("Due", {}).get("date"):
             due = props["Due"]["date"].get("start")
-        tasks.append({"id": page["id"], "title": title, "status": status, "due": due, "url": page.get("url", "")})
+        tasks.append({"id": page["id"], "title": title, "doneStatus": status, "due": due, "url": page.get("url", "")})
     return tasks
 
 
@@ -174,7 +174,7 @@ def notion_create_task(title, due=None):
         properties["Due"] = {"date": {"start": due}}
     body = {"parent": {"database_id": NOTION_DB_ID}, "properties": properties}
     result = notion_request("POST", "https://api.notion.com/v1/pages", body)
-    return {"id": result["id"], "title": title, "status": "Not started", "due": due}
+    return {"id": result["id"], "title": title, "doneStatus": "Not started", "due": due}
 
 
 def notion_update_task(page_id, updates):
@@ -185,6 +185,13 @@ def notion_update_task(page_id, updates):
         properties["Done"] = {"status": {"name": updates["status"]}}
     if "due" in updates:
         properties["Due"] = {"date": {"start": updates["due"]} if updates["due"] else None}
+    notion_request("PATCH", f"https://api.notion.com/v1/pages/{page_id}", {"properties": properties})
+    return {"ok": True}
+
+
+def notion_complete_task(page_id):
+    """Mark as Completed (sets Status multi-select to Completed)."""
+    properties = {"Status": {"multi_select": [{"name": "Completed"}]}}
     notion_request("PATCH", f"https://api.notion.com/v1/pages/{page_id}", {"properties": properties})
     return {"ok": True}
 
@@ -252,7 +259,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 result = notion_archive_task(body["id"])
                 self._send_json(result)
             elif action == "complete":
-                result = notion_update_task(body["id"], {"status": "Done"})
+                result = notion_complete_task(body["id"])
                 self._send_json(result)
             else:
                 self._send_json({"error": f"Unknown action: {action}"}, status=400)

@@ -62,7 +62,7 @@ def list_tasks():
         tasks.append({
             "id": page["id"],
             "title": title,
-            "status": status,
+            "doneStatus": status,
             "due": due,
             "url": page.get("url", ""),
         })
@@ -89,6 +89,15 @@ def update_task(page_id, updates):
         properties["Done"] = {"status": {"name": updates["status"]}}
     if "due" in updates:
         properties["Due"] = {"date": {"start": updates["due"]} if updates["due"] else None}
+    notion_request("PATCH", f"https://api.notion.com/v1/pages/{page_id}", {"properties": properties})
+    return {"ok": True}
+
+
+def complete_task(page_id):
+    """Mark a task as Completed (sets Status multi-select to Completed)."""
+    properties = {
+        "Status": {"multi_select": [{"name": "Completed"}]},
+    }
     notion_request("PATCH", f"https://api.notion.com/v1/pages/{page_id}", {"properties": properties})
     return {"ok": True}
 
@@ -122,7 +131,7 @@ class handler(BaseHTTPRequestHandler):
                 result = archive_task(body["id"])
                 self._send_json(result)
             elif action == "complete":
-                result = update_task(body["id"], {"status": "Done"})
+                result = complete_task(body["id"])
                 self._send_json(result)
             else:
                 self._send_json({"error": f"Unknown action: {action}"}, 400)
