@@ -27,7 +27,10 @@ def list_tasks():
         "filter": {
             "and": [
                 {"property": "Done", "status": {"does_not_equal": "Done"}},
-                {"property": "Status", "multi_select": {"does_not_contain": "Completed"}},
+                {
+                    "property": "Status",
+                    "multi_select": {"does_not_contain": "Completed"}
+                },
             ]
         },
         "sorts": [
