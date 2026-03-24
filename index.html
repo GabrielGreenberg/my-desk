@@ -304,7 +304,7 @@
     #sync-status.error { color: #e74c3c; }
     #sync-status.local { color: #f0ad4e; }
 
-    /* ---- Notion Tasks ---- */
+    /* ---- Task List (Notion) ---- */
     #notion-section {
       width: 100%;
       max-width: 640px;
@@ -316,19 +316,33 @@
       justify-content: space-between;
       margin-bottom: 10px;
     }
-    #notion-header h2 {
+    #notion-header-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      user-select: none;
+    }
+    #notion-header-left h2 {
       font-size: 0.95rem;
       font-weight: 600;
       color: #666;
       letter-spacing: 0.5px;
       text-transform: uppercase;
     }
+    #notion-toggle-wedge {
+      font-size: 0.7rem;
+      color: #999;
+      transition: transform 0.2s;
+      display: inline-block;
+    }
+    #notion-toggle-wedge.collapsed { transform: rotate(-90deg); }
     #notion-header .notion-actions {
       display: flex;
       gap: 8px;
       align-items: center;
     }
-    #notion-refresh-btn, #notion-add-btn, #notion-archive-btn {
+    .notion-action-btn {
       background: none;
       border: 1px solid #ddd;
       border-radius: 6px;
@@ -339,10 +353,17 @@
       font-family: inherit;
       transition: color 0.15s, border-color 0.15s;
     }
-    #notion-refresh-btn:hover, #notion-add-btn:hover, #notion-archive-btn:hover { color: #555; border-color: #999; }
-    #notion-archive-btn { border-color: #a0b4c8; color: #a0b4c8; }
-    #notion-archive-btn:hover { border-color: #7a96b0; color: #7a96b0; }
+    .notion-action-btn:hover { color: #555; border-color: #999; }
+    .notion-action-btn.archive { border-color: #a0b4c8; color: #a0b4c8; }
+    .notion-action-btn.archive:hover { border-color: #7a96b0; color: #7a96b0; }
+    .notion-action-btn.voice { border-color: #c8a0a0; color: #c8a0a0; }
+    .notion-action-btn.voice:hover { border-color: #b07a7a; color: #b07a7a; }
+    .notion-action-btn.voice.recording { border-color: #e74c3c; color: #e74c3c; border-style: solid; animation: pulse-border 1s infinite; }
     #notion-status { font-size: 0.75rem; color: #aaa; }
+    #notion-voice-status { width: 100%; text-align: center; font-size: 0.85rem; color: #888; margin-top: 6px; min-height: 1.2em; }
+
+    #notion-body { transition: max-height 0.3s ease, opacity 0.2s ease; overflow: hidden; }
+    #notion-body.collapsed { max-height: 0 !important; opacity: 0; }
 
     #notion-list {
       display: flex;
@@ -353,15 +374,19 @@
       background: #fff;
       border: 1px solid #e0e0e0;
       border-radius: 8px;
-      padding: 10px 14px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: opacity 0.2s;
+    }
+    .notion-task.checked-done { background: #f0faf0; }
+    .notion-task.checked-done .nt-title { color: #888; }
+    .notion-task-row {
       display: flex;
       align-items: center;
       gap: 10px;
-      transition: opacity 0.2s;
+      padding: 10px 14px;
     }
-    .notion-task.completed { opacity: 0.5; text-decoration: line-through; }
-    .notion-task.checked-done { background: #f0faf0; }
-    .notion-task.checked-done .nt-title { color: #888; }
     .notion-task .nt-check {
       background: none;
       border: none;
@@ -388,6 +413,17 @@
       white-space: nowrap;
     }
     .notion-task .nt-due.overdue { color: #e74c3c; }
+    .notion-task .nt-notes-toggle {
+      background: none;
+      border: none;
+      color: #bbb;
+      cursor: pointer;
+      font-size: 0.75rem;
+      padding: 2px 4px;
+      transition: color 0.15s;
+    }
+    .notion-task .nt-notes-toggle:hover { color: #666; }
+    .notion-task .nt-notes-toggle.has-content { color: #4a90d9; }
     .notion-task .nt-archive {
       background: none;
       border: none;
@@ -398,6 +434,24 @@
       transition: color 0.15s;
     }
     .notion-task .nt-archive:hover { color: #e74c3c; }
+
+    .nt-notes-area {
+      display: none;
+      padding: 0 14px 10px 42px;
+    }
+    .nt-notes-area.open { display: block; }
+    .nt-notes-area .nt-notes-content {
+      font-size: 0.85rem;
+      color: #555;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      min-height: 20px;
+    }
+    .nt-notes-area .nt-notes-loading {
+      font-size: 0.8rem;
+      color: #aaa;
+      font-style: italic;
+    }
 
     #notion-new-row {
       display: none;
@@ -455,18 +509,25 @@
 
 <div id="notion-section">
   <div id="notion-header">
-    <h2>Notion Tasks</h2>
-    <div class="notion-actions">
+    <div id="notion-header-left" onclick="toggleNotionCollapse()">
+      <span id="notion-toggle-wedge">▼</span>
+      <h2>Task List</h2>
+    </div>
+    <div class="notion-actions" id="notion-actions">
       <span id="notion-status"></span>
-      <button id="notion-refresh-btn" onclick="loadNotionTasks()">↻ Refresh</button>
-      <button id="notion-archive-btn" onclick="notionArchiveAllDone()">Archive Done</button>
-      <button id="notion-add-btn" onclick="toggleNotionNew()">+ New</button>
+      <button class="notion-action-btn voice" id="notion-voice-btn" onclick="toggleNotionVoice()">+ Voice</button>
+      <button class="notion-action-btn" onclick="loadNotionTasks()">↻ Refresh</button>
+      <button class="notion-action-btn" onclick="toggleNotionNew()">+ New</button>
+      <button class="notion-action-btn archive" onclick="notionArchiveAllDone()">Archive Done</button>
     </div>
   </div>
-  <div id="notion-list"></div>
-  <div id="notion-new-row">
-    <input id="notion-new-input" placeholder="New task..." onkeydown="if(event.key==='Enter')submitNotionNew()" />
-    <button id="notion-new-submit" onclick="submitNotionNew()">Add</button>
+  <div id="notion-body">
+    <div id="notion-voice-status"></div>
+    <div id="notion-list"></div>
+    <div id="notion-new-row">
+      <input id="notion-new-input" placeholder="New task..." onkeydown="if(event.key==='Enter')submitNotionNew()" />
+      <button id="notion-new-submit" onclick="submitNotionNew()">Add</button>
+    </div>
   </div>
 </div>
 
@@ -1062,9 +1123,19 @@ async function sendVoice(blob) {
 
 // ──────────── Notion Tasks ────────────
 let notionTasks = [];
+let notionCollapsed = false;
 const notionListEl = document.getElementById('notion-list');
 const notionStatusEl = document.getElementById('notion-status');
 
+// ── Collapse/Expand ──
+function toggleNotionCollapse() {
+  notionCollapsed = !notionCollapsed;
+  document.getElementById('notion-body').classList.toggle('collapsed', notionCollapsed);
+  document.getElementById('notion-toggle-wedge').classList.toggle('collapsed', notionCollapsed);
+  document.getElementById('notion-actions').style.display = notionCollapsed ? 'none' : 'flex';
+}
+
+// ── Load ──
 async function loadNotionTasks() {
   notionStatusEl.textContent = 'Loading...';
   try {
@@ -1081,6 +1152,7 @@ async function loadNotionTasks() {
   }
 }
 
+// ── Render ──
 function renderNotionTasks() {
   notionListEl.innerHTML = '';
   if (notionTasks.length === 0) {
@@ -1094,16 +1166,30 @@ function renderNotionTasks() {
 
     const dueStr = task.due ? formatDue(task.due) : '';
     const isOverdue = task.due && new Date(task.due) < new Date() && !isDone;
+    const hasContent = task._contentLoaded && task._content;
 
     row.innerHTML = `
-      <button class="nt-check ${isDone ? 'done' : ''}" title="${isDone ? 'Uncheck' : 'Mark done'}">${isDone ? '✓' : '○'}</button>
-      <input class="nt-title" value="${esc(task.title)}" />
-      ${dueStr ? `<span class="nt-due ${isOverdue ? 'overdue' : ''}">${dueStr}</span>` : ''}
-      <button class="nt-archive" title="Remove">✕</button>
+      <div class="notion-task-row">
+        <button class="nt-check ${isDone ? 'done' : ''}" title="${isDone ? 'Uncheck' : 'Mark done'}">${isDone ? '✓' : '○'}</button>
+        <input class="nt-title" value="${esc(task.title)}" />
+        ${dueStr ? `<span class="nt-due ${isOverdue ? 'overdue' : ''}">${dueStr}</span>` : ''}
+        <button class="nt-notes-toggle ${hasContent ? 'has-content' : ''}" title="Notes">▾</button>
+        <button class="nt-archive" title="Remove">✕</button>
+      </div>
+      <div class="nt-notes-area ${task._notesOpen ? 'open' : ''}">
+        <div class="${task._contentLoaded ? 'nt-notes-content' : 'nt-notes-loading'}">
+          ${task._contentLoaded ? (task._content || '<em style="color:#ccc">No content</em>') : 'Loading...'}
+        </div>
+      </div>
     `;
 
     row.querySelector('.nt-check').onclick = () => notionToggleDone(task);
     row.querySelector('.nt-archive').onclick = () => notionArchive(task, row);
+    row.querySelector('.nt-notes-toggle').onclick = () => {
+      task._notesOpen = !task._notesOpen;
+      if (task._notesOpen && !task._contentLoaded) fetchNotionContent(task);
+      renderNotionTasks();
+    };
 
     let titleTimer = null;
     row.querySelector('.nt-title').addEventListener('input', e => {
@@ -1113,6 +1199,26 @@ function renderNotionTasks() {
 
     notionListEl.appendChild(row);
   });
+}
+
+// ── Fetch page content ──
+async function fetchNotionContent(task) {
+  try {
+    const resp = await fetch('/api/notion', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'get_content', id: task.id })
+    });
+    const data = await resp.json();
+    task._content = data.content || '';
+    task._contentLoaded = true;
+    renderNotionTasks();
+  } catch (err) {
+    console.error('Notion content error:', err);
+    task._content = 'Error loading content';
+    task._contentLoaded = true;
+    renderNotionTasks();
+  }
 }
 
 function formatDue(dateStr) {
@@ -1127,9 +1233,10 @@ function formatDue(dateStr) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+// ── Toggle Done ──
 async function notionToggleDone(task) {
   const newStatus = task.doneStatus === 'Done' ? 'Not started' : 'Done';
-  task.doneStatus = newStatus; // optimistic update
+  task.doneStatus = newStatus;
   renderNotionTasks();
   try {
     await fetch('/api/notion', {
@@ -1139,11 +1246,12 @@ async function notionToggleDone(task) {
     });
   } catch (err) {
     console.error('Notion toggle error:', err);
-    task.doneStatus = newStatus === 'Done' ? 'Not started' : 'Done'; // revert
+    task.doneStatus = newStatus === 'Done' ? 'Not started' : 'Done';
     renderNotionTasks();
   }
 }
 
+// ── Archive All Done ──
 async function notionArchiveAllDone() {
   const doneTasks = notionTasks.filter(t => t.doneStatus === 'Done');
   if (doneTasks.length === 0) return;
@@ -1166,6 +1274,7 @@ async function notionArchiveAllDone() {
   }
 }
 
+// ── Archive single ──
 async function notionArchive(task, row) {
   row.style.opacity = '0.3';
   try {
@@ -1182,6 +1291,7 @@ async function notionArchive(task, row) {
   }
 }
 
+// ── Update title ──
 async function notionUpdateTitle(task, newTitle) {
   try {
     await fetch('/api/notion', {
@@ -1195,6 +1305,7 @@ async function notionUpdateTitle(task, newTitle) {
   }
 }
 
+// ── New task ──
 function toggleNotionNew() {
   const row = document.getElementById('notion-new-row');
   row.classList.toggle('open');
@@ -1224,6 +1335,83 @@ async function submitNotionNew() {
     console.error('Notion create error:', err);
     notionStatusEl.textContent = 'Error adding task';
     setTimeout(() => { notionStatusEl.textContent = ''; }, 3000);
+  }
+}
+
+// ──────────── Notion Voice ────────────
+let notionMediaRecorder = null;
+let notionAudioChunks = [];
+const notionVoiceBtn = document.getElementById('notion-voice-btn');
+const notionVoiceStatus = document.getElementById('notion-voice-status');
+
+function toggleNotionVoice() {
+  if (notionMediaRecorder && notionMediaRecorder.state === 'recording') {
+    stopNotionVoice();
+  } else {
+    startNotionVoice();
+  }
+}
+
+async function startNotionVoice() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    notionAudioChunks = [];
+    notionMediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+    notionMediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) notionAudioChunks.push(e.data); };
+    notionMediaRecorder.onstop = () => {
+      stream.getTracks().forEach(t => t.stop());
+      sendNotionVoice(new Blob(notionAudioChunks, { type: 'audio/webm' }));
+    };
+    notionMediaRecorder.start();
+    notionVoiceBtn.textContent = '⏹ Stop';
+    notionVoiceBtn.classList.add('recording');
+    notionVoiceStatus.textContent = 'Recording...';
+  } catch (err) {
+    notionVoiceStatus.textContent = 'Mic access denied';
+    console.error('Mic error:', err);
+  }
+}
+
+function stopNotionVoice() {
+  if (notionMediaRecorder && notionMediaRecorder.state === 'recording') {
+    notionMediaRecorder.stop();
+    notionVoiceBtn.textContent = '+ Voice';
+    notionVoiceBtn.classList.remove('recording');
+    notionVoiceStatus.textContent = 'Processing...';
+  }
+}
+
+async function sendNotionVoice(blob) {
+  try {
+    const form = new FormData();
+    form.append('audio', blob, 'recording.webm');
+    const resp = await fetch('/api/voice', { method: 'POST', body: form });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    if (data.tasks && data.tasks.length > 0) {
+      // Create each task in Notion
+      notionVoiceStatus.textContent = `Creating ${data.tasks.length} task(s) in Notion...`;
+      for (const t of data.tasks) {
+        try {
+          const resp = await fetch('/api/notion', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'create', title: t.label })
+          });
+          const created = await resp.json();
+          if (!created.error) notionTasks.unshift(created);
+        } catch (e) { console.error('Create error:', e); }
+      }
+      renderNotionTasks();
+      notionVoiceStatus.textContent = `Added ${data.tasks.length} task(s)`;
+    } else {
+      notionVoiceStatus.textContent = 'No tasks found in recording';
+    }
+    setTimeout(() => { notionVoiceStatus.textContent = ''; }, 3000);
+  } catch (err) {
+    notionVoiceStatus.textContent = 'Error: ' + err.message;
+    console.error('Notion voice error:', err);
+    setTimeout(() => { notionVoiceStatus.textContent = ''; }, 5000);
   }
 }
 

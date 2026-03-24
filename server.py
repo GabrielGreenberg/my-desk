@@ -189,6 +189,29 @@ def notion_update_task(page_id, updates):
     return {"ok": True}
 
 
+def notion_get_content(page_id):
+    """Get the text content of a Notion page."""
+    result = notion_request("GET", f"https://api.notion.com/v1/blocks/{page_id}/children")
+    lines = []
+    for block in result.get("results", []):
+        btype = block.get("type", "")
+        bdata = block.get(btype, {})
+        rich_text = bdata.get("rich_text", [])
+        text = "".join(t.get("plain_text", "") for t in rich_text)
+        if btype == "to_do":
+            checked = bdata.get("checked", False)
+            lines.append(f"{'[x]' if checked else '[ ]'} {text}")
+        elif btype in ("heading_1", "heading_2", "heading_3"):
+            lines.append(text)
+        elif btype == "bulleted_list_item":
+            lines.append(f"• {text}")
+        elif btype == "numbered_list_item":
+            lines.append(f"- {text}")
+        elif text:
+            lines.append(text)
+    return "\n".join(lines)
+
+
 def notion_complete_task(page_id):
     """Mark as Completed (sets Status multi-select to Completed)."""
     properties = {"Status": {"multi_select": [{"name": "Completed"}]}}
@@ -261,6 +284,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             elif action == "complete":
                 result = notion_complete_task(body["id"])
                 self._send_json(result)
+            elif action == "get_content":
+                content = notion_get_content(body["id"])
+                self._send_json({"content": content})
             else:
                 self._send_json({"error": f"Unknown action: {action}"}, status=400)
         except Exception as e:
