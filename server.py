@@ -232,9 +232,10 @@ def notion_get_content(page_id):
         text = _rich_text_html(rich_text)
         if btype == "to_do":
             checked = bdata.get("checked", False)
-            icon = "☑" if checked else "☐"
+            block_id = block.get("id", "")
+            chk = "checked" if checked else ""
             style = ' style="color:#999;text-decoration:line-through"' if checked else ''
-            html_parts.append(f'<div{style}>{icon} {text}</div>')
+            html_parts.append(f'<div class="nt-todo-block"{style}><input type="checkbox" {chk} data-block-id="{block_id}" class="nt-todo-checkbox" /> {text}</div>')
         elif btype == "heading_1":
             html_parts.append(f"<h3>{text}</h3>")
         elif btype == "heading_2":
@@ -263,6 +264,14 @@ def notion_get_content(page_id):
         elif text:
             html_parts.append(f"<div>{text}</div>")
     return "\n".join(html_parts)
+
+
+def notion_toggle_block_todo(block_id, checked):
+    """Toggle the checked state of a to_do block."""
+    notion_request("PATCH", f"https://api.notion.com/v1/blocks/{block_id}", {
+        "to_do": {"checked": checked}
+    })
+    return {"ok": True}
 
 
 def notion_complete_task(page_id):
@@ -340,6 +349,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             elif action == "get_content":
                 content = notion_get_content(body["id"])
                 self._send_json({"content": content})
+            elif action == "toggle_block_todo":
+                result = notion_toggle_block_todo(body["block_id"], body["checked"])
+                self._send_json(result)
             else:
                 self._send_json({"error": f"Unknown action: {action}"}, status=400)
         except Exception as e:

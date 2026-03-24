@@ -453,6 +453,8 @@
     .nt-notes-area .nt-notes-content code { background: #f0f0f0; padding: 1px 4px; border-radius: 3px; font-size: 0.8rem; }
     .nt-notes-area .nt-notes-content a { color: #4a90d9; text-decoration: none; }
     .nt-notes-area .nt-notes-content a:hover { text-decoration: underline; }
+    .nt-notes-area .nt-todo-checkbox { cursor: pointer; margin-right: 4px; accent-color: #4ade80; }
+    .nt-notes-area .nt-todo-block { display: flex; align-items: center; gap: 2px; }
     .nt-notes-area .nt-notes-loading {
       font-size: 0.8rem;
       color: #aaa;
@@ -1194,7 +1196,7 @@ function renderNotionTasks() {
     row.querySelector('.nt-notes-toggle').onclick = () => {
       task._notesOpen = !task._notesOpen;
       if (task._notesOpen && !task._contentLoaded) fetchNotionContent(task);
-      renderNotionTasks();
+      else renderNotionTasks();
     };
 
     let titleTimer = null;
@@ -1205,6 +1207,8 @@ function renderNotionTasks() {
 
     notionListEl.appendChild(row);
   });
+  // Wire up any checkboxes in already-loaded notes
+  setTimeout(() => wireNotionCheckboxes(), 0);
 }
 
 // ── Fetch page content ──
@@ -1219,12 +1223,42 @@ async function fetchNotionContent(task) {
     task._content = data.content || '';
     task._contentLoaded = true;
     renderNotionTasks();
+    wireNotionCheckboxes(task);
   } catch (err) {
     console.error('Notion content error:', err);
     task._content = 'Error loading content';
     task._contentLoaded = true;
     renderNotionTasks();
   }
+}
+
+function wireNotionCheckboxes(task) {
+  // Find all checkboxes in the notes area and attach toggle handlers
+  const checkboxes = notionListEl.querySelectorAll(`.nt-todo-checkbox`);
+  checkboxes.forEach(cb => {
+    if (cb._wired) return;
+    cb._wired = true;
+    cb.addEventListener('change', async (e) => {
+      const blockId = cb.dataset.blockId;
+      const checked = cb.checked;
+      // Update visual immediately
+      const row = cb.closest('.nt-todo-block');
+      if (row) {
+        row.style.color = checked ? '#999' : '';
+        row.style.textDecoration = checked ? 'line-through' : '';
+      }
+      try {
+        await fetch('/api/notion', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'toggle_block_todo', block_id: blockId, checked: checked })
+        });
+      } catch (err) {
+        console.error('Toggle todo error:', err);
+        cb.checked = !checked; // revert
+      }
+    });
+  });
 }
 
 function formatDue(dateStr) {
