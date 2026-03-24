@@ -4,6 +4,9 @@
   "functions": {
     "api/voice.py": {
       "maxDuration": 30
+    },
+    "api/notion.py": {
+      "maxDuration": 15
     }
   }
 }
