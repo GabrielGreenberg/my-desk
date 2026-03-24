@@ -25,8 +25,10 @@ def notion_request(method, url, body=None):
 def list_tasks():
     body = {
         "filter": {
-            "property": "Done",
-            "status": {"does_not_equal": "Done"}
+            "and": [
+                {"property": "Done", "status": {"does_not_equal": "Done"}},
+                {"property": "Status", "multi_select": {"does_not_contain": "Completed"}},
+            ]
         },
         "sorts": [
             {"property": "Due", "direction": "ascending"},
