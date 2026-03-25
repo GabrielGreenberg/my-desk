@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Android Icon Preview</title>
+<style>
+  body { font-family: -apple-system, sans-serif; background: #1a1a1a; color: #eee; padding: 2rem; margin: 0; }
+  h1 { font-weight: 300; margin-bottom: 0.5rem; }
+  h2 { font-weight: 400; color: #aaa; margin-top: 2rem; margin-bottom: 1rem; font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; }
+  .grid { display: flex; flex-wrap: wrap; gap: 2rem; align-items: end; }
+  .icon-card { text-align: center; }
+  .icon-card img { border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); display: block; margin: 0 auto 0.5rem; }
+  .icon-card .label { font-size: 0.75rem; color: #888; }
+  .icon-card .size { font-size: 0.65rem; color: #666; }
+  .maskable-demo { display: flex; gap: 1.5rem; align-items: center; margin-top: 1rem; }
+  .mask-circle { border-radius: 50%; overflow: hidden; }
+  .mask-squircle { border-radius: 24%; overflow: hidden; }
+  .mask-square { border-radius: 8px; overflow: hidden; }
+  .mask-circle img, .mask-squircle img, .mask-square img { display: block; }
+  .shape-label { font-size: 0.65rem; color: #666; text-align: center; margin-top: 4px; }
+</style>
+</head>
+<body>
+  <h1>Android Icon Preview</h1>
+
+  <h2>Maskable Icons (with safe-zone padding)</h2>
+  <div class="grid">
+    <div class="icon-card">
+      <img src="android-icon-maskable-512.png" width="128" height="128">
+      <div class="label">maskable-512</div>
+      <div class="size">512x512</div>
+    </div>
+    <div class="icon-card">
+      <img src="android-icon-maskable-192.png" width="96" height="96">
+      <div class="label">maskable-192</div>
+      <div class="size">192x192</div>
+    </div>
+  </div>
+
+  <h2>Adaptive Icon Shape Preview (maskable-512)</h2>
+  <div class="maskable-demo">
+    <div>
+      <div class="mask-circle"><img src="android-icon-maskable-512.png" width="96" height="96"></div>
+      <div class="shape-label">Circle</div>
+    </div>
+    <div>
+      <div class="mask-squircle"><img src="android-icon-maskable-512.png" width="96" height="96"></div>
+      <div class="shape-label">Squircle</div>
+    </div>
+    <div>
+      <div class="mask-square"><img src="android-icon-maskable-512.png" width="96" height="96"></div>
+      <div class="shape-label">Rounded Square</div>
+    </div>
+  </div>
+
+  <h2>Standard Android Launcher Icons</h2>
+  <div class="grid">
+    <div class="icon-card">
+      <img src="android-icon-192.png" width="96" height="96">
+      <div class="label">192 (xxxhdpi)</div>
+    </div>
+    <div class="icon-card">
+      <img src="android-icon-144.png" width="72" height="72">
+      <div class="label">144 (xxhdpi)</div>
+    </div>
+    <div class="icon-card">
+      <img src="android-icon-96.png" width="64" height="64">
+      <div class="label">96 (xhdpi)</div>
+    </div>
+    <div class="icon-card">
+      <img src="android-icon-72.png" width="56" height="56">
+      <div class="label">72 (hdpi)</div>
+    </div>
+    <div class="icon-card">
+      <img src="android-icon-48.png" width="48" height="48">
+      <div class="label">48 (mdpi)</div>
+    </div>
+  </div>
+
+  <h2>Original Source Icon</h2>
+  <div class="grid">
+    <div class="icon-card">
+      <img src="icon-512.png" width="128" height="128">
+      <div class="label">icon-512 (original)</div>
+    </div>
+  </div>
+</body>
+</html>
