@@ -134,6 +134,22 @@ def _rich_text_html(rich_text_arr):
     return "".join(parts)
 
 
+_EDITABLE_TYPES = {
+    "paragraph", "heading_1", "heading_2", "heading_3",
+    "bulleted_list_item", "numbered_list_item", "quote",
+    "to_do", "callout", "toggle", "code",
+}
+
+
+def _editable_span(btype, block_id, inner):
+    if btype not in _EDITABLE_TYPES or not block_id:
+        return inner
+    return (
+        f'<span class="nt-block-text" contenteditable="true" '
+        f'data-block-id="{block_id}" data-block-type="{btype}">{inner}</span>'
+    )
+
+
 def get_content(page_id):
     """Get the HTML content of a Notion page."""
     result = notion_request("GET", f"https://api.notion.com/v1/blocks/{page_id}/children")
@@ -143,41 +159,52 @@ def get_content(page_id):
         bdata = block.get(btype, {})
         rich_text = bdata.get("rich_text", [])
         text = _rich_text_html(rich_text)
+        block_id = block.get("id", "")
+        editable = _editable_span(btype, block_id, text or "&#8203;")
         if btype == "to_do":
             checked = bdata.get("checked", False)
-            block_id = block.get("id", "")
             chk = "checked" if checked else ""
             style = ' style="color:#999;text-decoration:line-through"' if checked else ''
-            html_parts.append(f'<div class="nt-todo-block"{style}><input type="checkbox" {chk} data-block-id="{block_id}" class="nt-todo-checkbox" /> {text}</div>')
+            html_parts.append(f'<div class="nt-todo-block"{style}><input type="checkbox" {chk} data-block-id="{block_id}" class="nt-todo-checkbox" /> {editable}</div>')
         elif btype == "heading_1":
-            html_parts.append(f"<h3>{text}</h3>")
+            html_parts.append(f"<h3>{editable}</h3>")
         elif btype == "heading_2":
-            html_parts.append(f"<h4>{text}</h4>")
+            html_parts.append(f"<h4>{editable}</h4>")
         elif btype == "heading_3":
-            html_parts.append(f"<h5>{text}</h5>")
+            html_parts.append(f"<h5>{editable}</h5>")
         elif btype == "bulleted_list_item":
-            html_parts.append(f"<div>• {text}</div>")
+            html_parts.append(f"<div>• {editable}</div>")
         elif btype == "numbered_list_item":
-            html_parts.append(f"<div>‣ {text}</div>")
+            html_parts.append(f"<div>‣ {editable}</div>")
         elif btype == "quote":
-            html_parts.append(f'<blockquote style="border-left:3px solid #ddd;padding-left:10px;color:#666;margin:4px 0">{text}</blockquote>')
+            html_parts.append(f'<blockquote style="border-left:3px solid #ddd;padding-left:10px;color:#666;margin:4px 0">{editable}</blockquote>')
         elif btype == "code":
-            lang = bdata.get("language", "")
-            html_parts.append(f'<pre style="background:#f5f5f5;padding:8px;border-radius:4px;font-size:0.8rem;overflow-x:auto"><code>{text}</code></pre>')
+            html_parts.append(f'<pre style="background:#f5f5f5;padding:8px;border-radius:4px;font-size:0.8rem;overflow-x:auto"><code>{editable}</code></pre>')
         elif btype == "divider":
             html_parts.append('<hr style="border:none;border-top:1px solid #e0e0e0;margin:8px 0">')
         elif btype == "callout":
             emoji = bdata.get("icon", {}).get("emoji", "💡")
-            html_parts.append(f'<div style="background:#f9f9f9;border-radius:6px;padding:8px 12px;margin:4px 0">{emoji} {text}</div>')
+            html_parts.append(f'<div style="background:#f9f9f9;border-radius:6px;padding:8px 12px;margin:4px 0">{emoji} {editable}</div>')
         elif btype == "toggle":
-            html_parts.append(f"<details><summary>{text}</summary></details>")
+            html_parts.append(f"<details><summary>{editable}</summary></details>")
         elif btype == "image":
             url = bdata.get("file", bdata.get("external", {})).get("url", "")
             if url:
                 html_parts.append(f'<img src="{url}" style="max-width:100%;border-radius:4px;margin:4px 0" />')
+        elif btype == "paragraph":
+            html_parts.append(f"<div>{editable}</div>")
         elif text:
             html_parts.append(f"<div>{text}</div>")
     return "\n".join(html_parts)
+
+
+def update_block_text(block_id, block_type, text):
+    """Overwrite the rich_text of a block with plain text."""
+    if block_type not in _EDITABLE_TYPES:
+        return {"ok": False, "error": f"type {block_type} not editable"}
+    body = {block_type: {"rich_text": [{"type": "text", "text": {"content": text}}]}}
+    notion_request("PATCH", f"https://api.notion.com/v1/blocks/{block_id}", body)
+    return {"ok": True}
 
 
 def toggle_block_todo(block_id, checked):
@@ -224,6 +251,9 @@ class handler(BaseHTTPRequestHandler):
                 self._send_json({"content": content})
             elif action == "toggle_block_todo":
                 result = toggle_block_todo(body["block_id"], body["checked"])
+                self._send_json(result)
+            elif action == "update_block":
+                result = update_block_text(body["block_id"], body["block_type"], body.get("text", ""))
                 self._send_json(result)
             else:
                 self._send_json({"error": f"Unknown action: {action}"}, 400)
