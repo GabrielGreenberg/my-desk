@@ -331,11 +331,15 @@
       text-transform: uppercase;
     }
     #notion-toggle-wedge {
-      font-size: 0.7rem;
       color: #999;
       transition: transform 0.2s;
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 12px;
+      height: 12px;
     }
+    #notion-toggle-wedge svg { width: 100%; height: 100%; display: block; }
     #notion-toggle-wedge.collapsed { transform: rotate(-90deg); }
     #notion-header .notion-actions {
       display: flex;
@@ -419,10 +423,13 @@
       border: none;
       color: #bbb;
       cursor: pointer;
-      font-size: 0.75rem;
       padding: 2px 4px;
       transition: color 0.15s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
+    .notion-task .nt-notes-toggle svg { width: 12px; height: 12px; display: block; }
     .notion-task .nt-notes-toggle:hover { color: #666; }
     .notion-task .nt-notes-toggle.has-content { color: #4a90d9; }
     .notion-task .nt-archive {
@@ -523,7 +530,7 @@
 <div id="notion-section">
   <div id="notion-header">
     <div id="notion-header-left" onclick="toggleNotionCollapse()">
-      <span id="notion-toggle-wedge">▼</span>
+      <span id="notion-toggle-wedge"><svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l4 4 4-4"/></svg></span>
       <h2>Task List</h2>
     </div>
     <div class="notion-actions" id="notion-actions">
@@ -1186,7 +1193,7 @@ function renderNotionTasks() {
         <button class="nt-check ${isDone ? 'done' : ''}" title="${isDone ? 'Uncheck' : 'Mark done'}">${isDone ? '✓' : '○'}</button>
         <input class="nt-title" value="${esc(task.title)}" />
         ${dueStr ? `<span class="nt-due ${isOverdue ? 'overdue' : ''}">${dueStr}</span>` : ''}
-        <button class="nt-notes-toggle ${hasContent ? 'has-content' : ''}" title="Notes">▾</button>
+        <button class="nt-notes-toggle ${hasContent ? 'has-content' : ''}" title="Notes"><svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l4 4 4-4"/></svg></button>
         <button class="nt-archive" title="Remove">✕</button>
       </div>
       <div class="nt-notes-area ${task._notesOpen ? 'open' : ''}">
