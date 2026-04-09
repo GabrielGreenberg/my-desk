@@ -456,6 +456,10 @@
     .nt-notes-area .nt-notes-content a:hover { text-decoration: underline; }
     .nt-notes-area .nt-todo-checkbox { cursor: pointer; margin-right: 4px; accent-color: #4ade80; }
     .nt-notes-area .nt-todo-block { display: flex; align-items: center; gap: 2px; }
+    .nt-notes-area .nt-block-text { outline: none; border-radius: 3px; padding: 0 2px; }
+    .nt-notes-area .nt-block-text:focus { background: #f5f9ff; box-shadow: 0 0 0 1px #c7dcf5; }
+    .nt-notes-area .nt-block-text.saving { background: #fff8e1; }
+    .nt-notes-area .nt-block-text.saved { background: #e8f7e8; transition: background 0.8s; }
     .nt-notes-area .nt-notes-loading {
       font-size: 0.8rem;
       color: #aaa;
@@ -1257,6 +1261,62 @@ function wireNotionCheckboxes(task) {
       } catch (err) {
         console.error('Toggle todo error:', err);
         cb.checked = !checked; // revert
+      }
+    });
+  });
+
+  // Wire editable block text (contenteditable spans)
+  const editables = notionListEl.querySelectorAll('.nt-block-text');
+  editables.forEach(el => {
+    if (el._wired) return;
+    el._wired = true;
+    el._lastSaved = el.textContent.replace(/\u200B/g, '');
+
+    const save = async () => {
+      const text = el.textContent.replace(/\u200B/g, '');
+      if (text === el._lastSaved) return;
+      const blockId = el.dataset.blockId;
+      const blockType = el.dataset.blockType;
+      el.classList.add('saving');
+      try {
+        const resp = await fetch('/api/notion', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'update_block', block_id: blockId, block_type: blockType, text })
+        });
+        const data = await resp.json();
+        el.classList.remove('saving');
+        if (data.ok) {
+          el._lastSaved = text;
+          el.classList.add('saved');
+          setTimeout(() => el.classList.remove('saved'), 800);
+        } else {
+          el.classList.add('error');
+          console.error('Block save error:', data);
+        }
+      } catch (err) {
+        el.classList.remove('saving');
+        console.error('Block save error:', err);
+      }
+    };
+
+    let debounceTimer = null;
+    el.addEventListener('input', () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(save, 900);
+    });
+    el.addEventListener('blur', () => {
+      clearTimeout(debounceTimer);
+      save();
+    });
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        el.blur();
+      }
+      if (e.key === 'Escape') {
+        el.textContent = el._lastSaved;
+        el.blur();
       }
     });
   });
