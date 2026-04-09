@@ -164,10 +164,13 @@
       border: none;
       color: #bbb;
       cursor: pointer;
-      font-size: 0.75rem;
       padding: 2px 4px;
       transition: color 0.15s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
+    .notes-toggle svg { width: 12px; height: 12px; display: block; }
     .notes-toggle:hover { color: #666; }
     .notes-toggle.has-notes { color: #4a90d9; }
 
@@ -233,6 +236,31 @@
     .voice-btn.recording { border-color: #e74c3c; color: #e74c3c; animation: pulse-border 1s infinite; }
     @keyframes pulse-border { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
     #voice-status { width: 100%; max-width: 640px; text-align: center; font-size: 0.85rem; color: #888; margin-top: 6px; min-height: 1.2em; }
+
+    /* ---- Mobile / phone view ---- */
+    @media (max-width: 600px) {
+      body { padding: 56px 10px 20px; }
+      #clock { font-size: 3.2rem; letter-spacing: 2px; }
+      #date { font-size: 0.95rem; margin-bottom: 24px; }
+      .item-content { padding: 8px 10px; gap: 6px; }
+      .item-label { font-size: 0.9rem; min-width: 0; }
+      .timer-display {
+        min-width: 0;
+        font-size: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 2px;
+      }
+      .time-input {
+        width: 48px;
+        font-size: 0.72rem;
+        padding: 2px 3px;
+      }
+      .btn { padding: 4px 2px; font-size: 1rem; }
+      .check-btn { font-size: 1rem; }
+      .notes-area { padding: 0 10px 10px 36px; }
+      .add-btn { font-size: 0.75rem; padding: 6px 8px; }
+    }
 
     /* ---- Fullscreen toggle ---- */
     #fs-btn {
@@ -679,7 +707,7 @@ function renderTodo(item, idx) {
     <div class="item-content">
       <button class="btn check-btn ${item.checked ? 'checked' : ''}" title="Toggle">${item.checked ? '&#10003;' : '&#9675;'}</button>
       <input class="item-label" value="${esc(item.label)}" placeholder="To-do..." />
-      <button class="btn notes-toggle ${hasNotes(item) ? 'has-notes' : ''}" title="Notes">&#9660;</button>
+      <button class="btn notes-toggle ${hasNotes(item) ? 'has-notes' : ''}" title="Notes"><svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l4 4 4-4"/></svg></button>
       <button class="btn delete-btn" title="Delete">&#10005;</button>
     </div>
     <div class="notes-area ${item._notesOpen ? 'open' : ''}">
@@ -756,12 +784,11 @@ function renderTimer(item, idx) {
         ${done ? '&#10003;' : '&#9675;'}
       </button>
       <input class="item-label" value="${esc(item.label)}" placeholder="Timer label..." />
+      <button class="btn play-btn" title="${item.running ? 'Pause' : 'Start'}">${item.running ? '&#9646;&#9646;' : '&#9654;'}</button>
       <div class="timer-display">
         <input class="time-input elapsed-input" value="${formatTime(item.elapsed)}" title="Elapsed time (mm:ss or hh:mm:ss)" /> / <input class="time-input" value="${formatTime(item.totalSeconds)}" title="Total time (mm:ss or hh:mm:ss)" />
       </div>
-      <button class="btn play-btn" title="${item.running ? 'Pause' : 'Start'}">${item.running ? '&#9646;&#9646;' : '&#9654;'}</button>
-      <button class="btn reset-btn" title="Reset">&#8634;</button>
-      <button class="btn notes-toggle ${hasNotes(item) ? 'has-notes' : ''}" title="Notes">&#9660;</button>
+      <button class="btn notes-toggle ${hasNotes(item) ? 'has-notes' : ''}" title="Notes"><svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l4 4 4-4"/></svg></button>
       <button class="btn delete-btn" title="Delete">&#10005;</button>
     </div>
     <div class="notes-area ${item._notesOpen ? 'open' : ''}">
@@ -788,7 +815,6 @@ function renderTimer(item, idx) {
 
   row.querySelector('.check-btn').onclick = () => { if (done) { item.elapsed = 0; item.running = false; stopInterval(item); save(); renderAll(); } };
   row.querySelector('.play-btn').onclick = () => { toggleTimer(item, idx); };
-  row.querySelector('.reset-btn').onclick = () => { item.elapsed = 0; item.running = false; stopInterval(item); save(); renderAll(); };
   row.querySelector('.delete-btn').onclick = () => { stopInterval(item); archiveItem(idx); };
 
   return row;
