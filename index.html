@@ -212,18 +212,25 @@
     /* ──────── Item row ──────── */
     .item {
       position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .item.dragging { opacity: 0.4; }
+    .item.checked:not(.timer) .bar-fill { background: var(--bar-done); }
+
+    .item-row {
+      position: relative;
+      overflow: hidden;
+      min-height: 48px;
       background: var(--surface);
       backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
       border: 1px solid var(--border);
       border-radius: 10px;
-      overflow: hidden;
-      min-height: 48px;
       transition: border-color 0.2s;
     }
-    .item.dragging { opacity: 0.4; }
-    .item.running { border-color: var(--accent-mid); }
-    .item:hover { border-color: var(--border-hi); }
-    .item.checked:not(.timer) .bar-fill { background: var(--bar-done); }
+    .item-row:hover { border-color: var(--border-hi); }
+    .item.running .item-row { border-color: var(--accent-mid); }
 
     .drop-indicator {
       height: 2px;
@@ -262,10 +269,10 @@
 
     .scrub-handle {
       position: absolute; top: 0; bottom: 0;
-      width: 18px;
+      width: 28px;
       transform: translateX(-50%);
       cursor: ew-resize;
-      z-index: 2;
+      z-index: 4;
       touch-action: none;
       display: flex; align-items: center; justify-content: center;
     }
@@ -275,11 +282,12 @@
       border-radius: 2px;
       background: var(--accent);
       box-shadow: 0 0 0 1.5px var(--bg-solid), 0 1px 4px rgba(0,0,0,0.25);
-      opacity: 0.85;
+      opacity: 0;
       transition: opacity 0.15s, transform 0.15s;
     }
-    .item:hover .scrub-handle::before { opacity: 1; transform: scaleY(1.15); }
-    .scrub-handle:active::before { transform: scaleY(1.25); }
+    .item:hover .scrub-handle::before,
+    .item:active .scrub-handle::before { opacity: 1; transform: scaleY(1.15); }
+    .scrub-handle:active::before { opacity: 1; transform: scaleY(1.25); }
     .item.done .scrub-handle,
     .item:not(.has-progress) .scrub-handle { display: none; }
 
@@ -408,17 +416,22 @@
 
     .notes-area {
       display: none;
-      padding: 0 14px 10px 42px;
+      padding: 10px 12px;
       position: relative;
-      z-index: 3;
+      background: var(--surface);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      transition: border-color 0.2s;
     }
     .notes-area.open { display: block; }
+    .notes-area:hover { border-color: var(--border-hi); }
+    .notes-area:focus-within { border-color: var(--accent); }
     .notes-area textarea {
       width: 100%;
-      background: rgba(0,0,0,0.12);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 8px 10px;
+      background: transparent;
+      border: none;
+      padding: 2px 4px;
       color: var(--text);
       font-size: 13px;
       resize: vertical;
@@ -427,7 +440,6 @@
       font-family: 'Geist', sans-serif;
       line-height: 1.5;
     }
-    .notes-area textarea:focus { border-color: var(--accent); }
 
     /* ──────── Add row ──────── */
     .add-row {
@@ -712,9 +724,9 @@
     <label>Time of day</label>
     <select id="phase-select">
       <option value="auto">Auto (by time of day)</option>
-      <option value="dawn">Dawn</option>
-      <option value="day">Afternoon</option>
-      <option value="dusk">Golden hour</option>
+      <option value="morning">Morning</option>
+      <option value="afternoon">Afternoon</option>
+      <option value="evening">Evening</option>
       <option value="night">Night</option>
     </select>
   </div>
@@ -730,22 +742,23 @@
 // Dusk theme engine — ported from design_handoff_my_desk_dusk/prototype/dusk-theme.js
 // ════════════════════════════════════════════════════════════════
 function duskPhaseForHour(hour) {
-  if (hour >= 5  && hour < 9)  return 'dawn';
-  if (hour >= 9  && hour < 17) return 'day';
-  if (hour >= 17 && hour < 21) return 'dusk';
+  if (hour >= 5  && hour < 12) return 'morning';
+  if (hour >= 12 && hour < 17) return 'afternoon';
+  if (hour >= 17 && hour < 21) return 'evening';
   return 'night';
 }
 function duskPhaseLabel(phase) {
-  return { dawn: 'dawn', day: 'afternoon', dusk: 'golden hour', night: 'night' }[phase];
+  return phase;
 }
 function duskPalette(phase, hue) {
   const H = hue;
   const table = {
-    dawn: {
+    morning: {
       bg: `linear-gradient(180deg,
              oklch(0.88 0.06 ${(H+10)%360}) 0%,
              oklch(0.82 0.05 ${(H+330)%360}) 45%,
              oklch(0.74 0.055 ${(H+280)%360}) 100%)`,
+      bgTop:     `oklch(0.88 0.06 ${(H+10)%360})`,
       bgSolid:   `oklch(0.85 0.04 ${H})`,
       text:      `oklch(0.24 0.03 ${(H+260)%360})`,
       textDim:   `oklch(0.42 0.025 ${(H+260)%360})`,
@@ -760,11 +773,12 @@ function duskPalette(phase, hue) {
       barFill:   `oklch(0.42 0.12 ${H} / 0.55)`,
       barDone:   `oklch(0.42 0.06 ${H} / 0.28)`,
     },
-    day: {
+    afternoon: {
       bg: `linear-gradient(180deg,
              oklch(0.86 0.035 ${(H+200)%360}) 0%,
              oklch(0.88 0.03 ${H}) 55%,
              oklch(0.84 0.045 ${(H+20)%360}) 100%)`,
+      bgTop:     `oklch(0.86 0.035 ${(H+200)%360})`,
       bgSolid:   `oklch(0.87 0.03 ${H})`,
       text:      `oklch(0.22 0.02 ${(H+240)%360})`,
       textDim:   `oklch(0.42 0.02 ${(H+240)%360})`,
@@ -779,12 +793,13 @@ function duskPalette(phase, hue) {
       barFill:   `oklch(0.40 0.13 ${H} / 0.55)`,
       barDone:   `oklch(0.40 0.06 ${H} / 0.26)`,
     },
-    dusk: {
+    evening: {
       bg: `linear-gradient(180deg,
              oklch(0.75 0.14 ${H}) 0%,
              oklch(0.55 0.14 ${(H+340)%360}) 45%,
              oklch(0.35 0.08 ${(H+290)%360}) 90%,
              oklch(0.24 0.05 ${(H+280)%360}) 100%)`,
+      bgTop:     `oklch(0.75 0.14 ${H})`,
       bgSolid:   `oklch(0.30 0.06 ${(H+290)%360})`,
       text:      `oklch(0.94 0.025 ${H})`,
       textDim:   `oklch(0.72 0.03 ${H})`,
@@ -804,6 +819,7 @@ function duskPalette(phase, hue) {
              oklch(0.18 0.04 ${(H+230)%360}) 0%,
              oklch(0.22 0.05 ${(H+260)%360}) 55%,
              oklch(0.16 0.04 ${(H+220)%360}) 100%)`,
+      bgTop:     `oklch(0.18 0.04 ${(H+230)%360})`,
       bgSolid:   `oklch(0.18 0.04 ${(H+230)%360})`,
       text:      `oklch(0.92 0.02 ${H})`,
       textDim:   `oklch(0.68 0.02 ${H})`,
@@ -839,8 +855,9 @@ function applyDuskTheme(phase, hue) {
   r.setProperty('--bar-fill', p.barFill);
   r.setProperty('--bar-done', p.barDone);
 
-  const meta = document.querySelector('meta[name="theme-color"]:not([media])');
-  if (meta) meta.setAttribute('content', p.bgSolid);
+  document.querySelectorAll('meta[name="theme-color"]').forEach(m => {
+    m.setAttribute('content', p.bgTop);
+  });
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -930,7 +947,7 @@ function updatePhaseLabel() {
   if (el) el.textContent = '· ' + duskPhaseLabel(phase).toUpperCase();
 }
 function updateWeatherGlyph() {
-  const glyphs = { dawn: '◐', day: '☀', dusk: '◑', night: '☾' };
+  const glyphs = { morning: '◐', afternoon: '☀', evening: '◑', night: '☾' };
   const el = document.getElementById('weather-glyph');
   if (el) el.textContent = glyphs[effectivePhase()];
 }
@@ -1049,14 +1066,16 @@ function renderTodo(item, idx) {
   row.setAttribute('draggable', 'true');
 
   row.innerHTML = `
-    ${item.checked ? '<div class="bar-fill" style="width:100%"></div>' : ''}
-    <div class="item-content">
-      <button class="check-btn ${item.checked ? 'on' : ''}" data-act="check" title="Toggle">${item.checked ? '✓' : ''}</button>
-      <input class="item-label" value="${esc(item.label)}" placeholder="To-do…" />
-      <button class="icon-btn ${hasNotes(item) ? 'has-notes' : ''}" data-act="notes" title="Notes">
-        <svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l4 4 4-4"/></svg>
-      </button>
-      <button class="icon-btn" data-act="delete" title="Delete">✕</button>
+    <div class="item-row">
+      ${item.checked ? '<div class="bar-fill" style="width:100%"></div>' : ''}
+      <div class="item-content">
+        <button class="check-btn ${item.checked ? 'on' : ''}" data-act="check" title="Toggle">${item.checked ? '✓' : ''}</button>
+        <input class="item-label" value="${esc(item.label)}" placeholder="To-do…" />
+        <button class="icon-btn ${hasNotes(item) ? 'has-notes' : ''}" data-act="notes" title="Notes">
+          <svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l4 4 4-4"/></svg>
+        </button>
+        <button class="icon-btn" data-act="delete" title="Delete">✕</button>
+      </div>
     </div>
     <div class="notes-area ${item._notesOpen ? 'open' : ''}">
       <textarea placeholder="Notes…">${esc(item.notes)}</textarea>
@@ -1076,26 +1095,28 @@ function renderTimer(item, idx) {
   row.setAttribute('draggable', 'true');
 
   row.innerHTML = `
-    <div class="bar-fill" style="width:${pct}%"></div>
-    <div class="playhead" style="left:${pct}%"></div>
-    <div class="scrub-handle" style="left:${pct}%" title="Drag to scrub"></div>
-    <div class="item-content">
-      <button class="check-btn ${done ? 'on' : ''}" data-act="reset" title="${done ? 'Reset' : 'Clear'}">${done ? '✓' : ''}</button>
-      <input class="item-label" value="${esc(item.label)}" placeholder="Timer…" />
-      <button class="play-btn" data-act="play" title="${item.running ? 'Pause' : 'Start'}">${item.running ? '❚❚' : '▶'}</button>
-      <div class="timer-display">
-        <input class="time-input elapsed-input" value="${fmtTime(item.elapsed)}" data-act="elapsed" title="Elapsed" />
-        <span style="opacity:.5">/</span>
-        <input class="time-input total-input" value="${fmtTime(item.totalSeconds)}" data-act="total" title="Total" />
-        <span class="time-adjust">
-          <button data-act="up" title="+30 min"><svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M1 5l4-4 4 4"/></svg></button>
-          <button data-act="down" title="−30 min"><svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l4 4 4-4"/></svg></button>
-        </span>
+    <div class="item-row">
+      <div class="bar-fill" style="width:${pct}%"></div>
+      <div class="playhead" style="left:${pct}%"></div>
+      <div class="scrub-handle" style="left:${pct}%" title="Drag to scrub"></div>
+      <div class="item-content">
+        <button class="check-btn ${done ? 'on' : ''}" data-act="reset" title="${done ? 'Reset' : 'Clear'}">${done ? '✓' : ''}</button>
+        <input class="item-label" value="${esc(item.label)}" placeholder="Timer…" />
+        <button class="play-btn" data-act="play" title="${item.running ? 'Pause' : 'Start'}">${item.running ? '❚❚' : '▶'}</button>
+        <div class="timer-display">
+          <input class="time-input elapsed-input" value="${fmtTime(item.elapsed)}" data-act="elapsed" title="Elapsed" />
+          <span style="opacity:.5">/</span>
+          <input class="time-input total-input" value="${fmtTime(item.totalSeconds)}" data-act="total" title="Total" />
+          <span class="time-adjust">
+            <button data-act="up" title="+30 min"><svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M1 5l4-4 4 4"/></svg></button>
+            <button data-act="down" title="−30 min"><svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l4 4 4-4"/></svg></button>
+          </span>
+        </div>
+        <button class="icon-btn ${hasNotes(item) ? 'has-notes' : ''}" data-act="notes" title="Notes">
+          <svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l4 4 4-4"/></svg>
+        </button>
+        <button class="icon-btn" data-act="delete" title="Delete">✕</button>
       </div>
-      <button class="icon-btn ${hasNotes(item) ? 'has-notes' : ''}" data-act="notes" title="Notes">
-        <svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l4 4 4-4"/></svg>
-      </button>
-      <button class="icon-btn" data-act="delete" title="Delete">✕</button>
     </div>
     <div class="notes-area ${item._notesOpen ? 'open' : ''}">
       <textarea placeholder="Notes…">${esc(item.notes)}</textarea>
