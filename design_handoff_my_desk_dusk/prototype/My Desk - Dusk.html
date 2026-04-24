@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>My Desk — Dusk</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..600,0..100&family=Geist:wght@300..600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { min-height: 100vh; }
+  body {
+    font-family: 'Geist', system-ui, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    background-attachment: fixed;
+    transition: background 2s ease, color 0.8s ease;
+    overflow-x: hidden;
+  }
+  input, button, textarea { font-family: inherit; color: inherit; }
+  button { cursor: pointer; }
+  .app {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 56px 28px 80px;
+    position: relative;
+  }
+  .glow {
+    position: fixed;
+    width: 60vw; height: 60vw; max-width: 700px; max-height: 700px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--accent-glow), transparent 70%);
+    top: -15%; right: -15%;
+    filter: blur(40px);
+    pointer-events: none;
+    z-index: 0;
+    transition: background 1.5s ease;
+  }
+  header.top {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 36px; gap: 20px;
+    position: relative; z-index: 1;
+  }
+  .clock {
+    font-family: 'Fraunces', serif; font-weight: 300;
+    font-size: clamp(44px, 7vw, 60px); line-height: 1;
+    letter-spacing: -0.5px;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    font-variation-settings: '"SOFT" 100, "opsz" 144';
+  }
+  .date {
+    font-family: 'Fraunces', serif; font-style: italic;
+    font-size: 14px; color: var(--text-dim); margin-top: 4px;
+  }
+  .phase { color: var(--accent); font-style: normal; font-weight: 500;
+           font-family: 'Geist', sans-serif; font-size: 11px;
+           letter-spacing: 1.5px; text-transform: uppercase;
+           margin-left: 8px; }
+  .weather-pill {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 14px;
+    background: var(--surface);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border); border-radius: 999px;
+    font-family: 'Geist', system-ui, sans-serif;
+    font-size: 11px; color: var(--text-dim);
+    letter-spacing: 0.3px; font-variant-numeric: tabular-nums; font-weight: 500;
+    white-space: nowrap;
+  }
+  .weather-pill .dot { color: var(--accent); font-size: 13px; }
+
+  .section-head {
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--text-dim); font-weight: 500;
+    margin-bottom: 12px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: relative; z-index: 1;
+  }
+  .section-head .meta {
+    font-family: 'Geist', system-ui, sans-serif;
+    font-size: 10px; color: var(--text-mute); letter-spacing: 0.5px; font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  #list, #backlog {
+    display: flex; flex-direction: column; gap: 6px;
+    position: relative; z-index: 1;
+  }
+
+  .item {
+    position: relative;
+    background: var(--surface);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    min-height: 48px;
+    transition: border-color 0.2s;
+  }
+  .item.dragging { opacity: 0.4; }
+  .item.running { border-color: var(--accent-mid); }
+  .item:hover { border-color: var(--border-hi); }
+  .drop-indicator {
+    height: 2px; background: var(--accent); border-radius: 1px;
+    margin: -2px 0; display: none;
+  }
+  .drop-indicator.visible { display: block; }
+
+  /* Refined timer bar — solid fill + bright playhead */
+  .bar-fill {
+    position: absolute; inset: 0;
+    width: 0%;
+    background: var(--bar-fill);
+    transition: width 0.35s ease, background 0.6s ease;
+    pointer-events: none;
+  }
+  .item.done .bar-fill { background: var(--bar-done); }
+  .playhead {
+    position: absolute; top: 0; bottom: 0;
+    width: 2px;
+    background: var(--accent);
+    transform: translateX(-1px);
+    pointer-events: none;
+    transition: left 0.35s ease;
+    z-index: 1;
+  }
+  .item.running .playhead {
+    box-shadow: 0 0 12px var(--accent), 0 0 3px var(--accent);
+  }
+  .item.done .playhead, .item:not(.has-progress) .playhead { display: none; }
+  .scrub-handle {
+    position: absolute; top: 0; bottom: 0;
+    width: 18px; transform: translateX(-50%);
+    cursor: ew-resize;
+    z-index: 2;
+    touch-action: none;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .scrub-handle::before {
+    content: '';
+    width: 4px; height: 20px; border-radius: 2px;
+    background: var(--accent);
+    box-shadow: 0 0 0 1.5px var(--bg-solid), 0 1px 4px rgba(0,0,0,0.25);
+    opacity: 0.85;
+    transition: opacity 0.15s, transform 0.15s;
+  }
+  .item:hover .scrub-handle::before { opacity: 1; transform: scaleY(1.15); }
+  .scrub-handle:active::before { transform: scaleY(1.25); }
+  .item.done .scrub-handle, .item:not(.has-progress) .scrub-handle { display: none; }
+
+  .item-content {
+    position: relative; z-index: 3;
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 13px;
+  }
+  .check-btn {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 1.5px solid var(--text-mute);
+    background: transparent;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-size: 10px; color: var(--bg-solid); font-weight: 600;
+    padding: 0;
+    transition: all 0.15s;
+  }
+  .check-btn.on {
+    border-color: var(--accent); background: var(--accent);
+  }
+  .check-btn:hover { border-color: var(--accent); }
+
+  .item-label {
+    flex: 1; background: transparent; border: none; outline: none;
+    font-size: 14px; color: var(--text);
+    min-width: 0;
+  }
+  .item-label::placeholder { color: var(--text-mute); }
+  .item.done .item-label { opacity: 0.5; }
+  .item.checked:not(.timer) .item-label { text-decoration: line-through; opacity: 0.5; }
+
+  .play-btn {
+    width: 24px; height: 24px; border-radius: 50%;
+    border: 1px solid var(--border);
+    background: transparent; color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; padding: 0;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .play-btn:hover { background: var(--accent); color: var(--bg-solid); border-color: var(--accent); }
+
+  .timer-display {
+    font-family: 'Geist', system-ui, sans-serif;
+    font-size: 11px; font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    display: flex; align-items: center; gap: 3px;
+  }
+  .time-input {
+    width: 58px;
+    background: rgba(0,0,0,0.08);
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 2px 4px;
+    text-align: center;
+    font: inherit; color: inherit;
+    font-size: 11px;
+  }
+  .time-input:focus { border-color: var(--accent); background: var(--surface-hi); outline: none; }
+
+  .time-adjust {
+    display: flex; flex-direction: column; gap: 1px; margin-left: 2px;
+  }
+  .time-adjust button {
+    width: 16px; height: 10px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-mute);
+    border-radius: 2px;
+    padding: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .time-adjust button:hover { color: var(--text); border-color: var(--text-dim); }
+  .time-adjust svg { width: 7px; height: 4px; }
+
+  .icon-btn {
+    background: transparent; border: none;
+    color: var(--text-mute);
+    width: 24px; height: 24px; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0; flex-shrink: 0;
+    font-size: 12px;
+    transition: color 0.15s, background 0.15s;
+  }
+  .icon-btn:hover { color: var(--text); background: rgba(255,255,255,0.06); }
+  .icon-btn.has-notes { color: var(--accent); }
+  .icon-btn svg { width: 11px; height: 11px; }
+
+  .add-row {
+    display: flex; gap: 6px;
+    margin-top: 14px; margin-bottom: 36px;
+    position: relative; z-index: 1;
+  }
+  .add-btn {
+    flex: 1;
+    padding: 8px 10px;
+    background: var(--surface);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-dim);
+    font-size: 12px;
+    letter-spacing: 0.2px;
+    transition: all 0.15s;
+  }
+  .add-btn:hover { color: var(--text); border-color: var(--border-hi); }
+  .add-btn.recording {
+    color: #e07868; border-color: #e07868;
+    animation: pulseBorder 1.2s infinite;
+  }
+  @keyframes pulseBorder { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+  .notes-area { display: none; padding: 0 14px 10px 42px; position: relative; z-index: 3; }
+  .notes-area.open { display: block; }
+  .notes-area textarea {
+    width: 100%;
+    background: rgba(0,0,0,0.12);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    color: var(--text);
+    font-size: 13px;
+    resize: vertical;
+    min-height: 50px;
+    outline: none;
+    font-family: 'Geist', sans-serif;
+  }
+  .notes-area textarea:focus { border-color: var(--accent); }
+
+  /* Backlog (slightly tighter) */
+  .backlog-head { margin-top: 0; margin-bottom: 10px; }
+  .backlog-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 13px;
+    background: var(--surface);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transition: border-color 0.15s;
+  }
+  .backlog-item:hover { border-color: var(--border-hi); }
+  .backlog-item .check-btn { width: 15px; height: 15px; font-size: 9px; }
+  .backlog-item.done { opacity: 0.5; }
+  .backlog-item.done .title { text-decoration: line-through; }
+  .backlog-item .title {
+    flex: 1; font-size: 13px; background: transparent; border: none; outline: none;
+  }
+  .backlog-item .due {
+    font-family: 'Geist', system-ui, sans-serif;
+    font-size: 10px; color: var(--text-mute); letter-spacing: 0.3px;
+    font-variant-numeric: tabular-nums; font-weight: 500;
+  }
+  .backlog-item .due.overdue { color: #e08866; }
+
+  .backlog-actions { display: flex; gap: 5px; }
+  .sm-btn {
+    padding: 3px 9px; font-size: 11px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-dim);
+  }
+  .sm-btn:hover { color: var(--text); border-color: var(--border-hi); }
+
+  /* Mobile */
+  @media (max-width: 560px) {
+    .app { padding: 44px 16px 60px; }
+    header.top { flex-direction: column; margin-bottom: 28px; }
+    .clock { font-size: 42px; }
+    .item-content { padding: 9px 10px; gap: 7px; }
+    .item-label { font-size: 13.5px; }
+    .timer-display { font-size: 10px; }
+    .time-input { width: 46px; font-size: 10px; }
+    .add-btn { font-size: 11px; padding: 7px 6px; }
+  }
+</style>
+</head>
+<body>
+<div class="glow" id="glow"></div>
+
+<div class="app">
+  <header class="top">
+    <div>
+      <div class="clock" id="clock">—</div>
+      <div class="date"><span id="date">—</span><span class="phase" id="phase"></span></div>
+    </div>
+    <div class="weather-pill">
+      <span class="dot" id="weather-glyph">◐</span>
+      <span id="weather-text">58° · mostly cloudy · sunset 7:42</span>
+    </div>
+  </header>
+
+  <div class="section-head">
+    <span>Today <span id="today-meta" class="meta"></span></span>
+    <span class="meta" id="running-indicator"></span>
+  </div>
+  <div id="list"></div>
+
+  <div class="add-row">
+    <button class="add-btn" id="voice-btn">+ Voice</button>
+    <button class="add-btn" id="todo-btn">+ To-do</button>
+    <button class="add-btn" id="timer-btn">+ Timer</button>
+    <button class="add-btn" id="archive-btn">Archive</button>
+  </div>
+
+  <div class="section-head backlog-head">
+    <span>Backlog · Notion</span>
+    <div class="backlog-actions">
+      <button class="sm-btn" id="backlog-add">+ New</button>
+      <button class="sm-btn" id="backlog-refresh">↻</button>
+    </div>
+  </div>
+  <div id="backlog"></div>
+</div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script src="dusk-theme.js"></script>
+<script src="dusk-app.js"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="dusk-tweaks.jsx"></script>
+</body>
+</html>

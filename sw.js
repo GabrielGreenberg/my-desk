@@ -1,4 +1,4 @@
-const CACHE_NAME = 'my-desk-v3';
+const CACHE_NAME = 'my-desk-dusk-v4';
 
 // App shell resources to pre-cache
 const APP_SHELL = [
@@ -10,8 +10,6 @@ const APP_SHELL = [
   './android-icon-maskable-192.png',
   './android-icon-maskable-512.png',
   './manifest.json',
-  'https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css',
-  'https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js',
 ];
 
 self.addEventListener('install', (e) => {

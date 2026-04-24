@@ -11,276 +11,50 @@
   <meta name="apple-mobile-web-app-title" content="My Desk">
   <link rel="icon" href="icon-192.png" type="image/png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
-  <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..600,0..100;1,9..144,300..600,0..100&family=Geist:wght@300..600&display=swap" rel="stylesheet">
+
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
+    html, body { min-height: 100vh; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #f5f5f7;
-      color: #333;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 40px 20px;
+      font-family: 'Geist', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      background-attachment: fixed;
+      transition: background 2s ease, color 0.8s ease;
+      overflow-x: hidden;
     }
+    input, button, textarea, select { font-family: inherit; color: inherit; }
+    button { cursor: pointer; }
 
-    /* ---- Clock & Date ---- */
-    #clock {
-      font-size: 5rem;
-      font-weight: 200;
-      letter-spacing: 4px;
-      color: #222;
-    }
-    #date {
-      font-size: 1.15rem;
-      color: #888;
-      margin-top: 4px;
-      margin-bottom: 48px;
-    }
-
-    /* ---- List container ---- */
-    #list {
-      width: 100%;
-      max-width: 640px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    /* ---- Shared item row ---- */
-    .item {
-      position: relative;
-      background: #fff;
-      border: 1px solid #e0e0e0;
-      border-radius: 10px;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      min-height: 52px;
-      cursor: grab;
-    }
-    .item.dragging { opacity: 0.4; cursor: grabbing; }
-
-    /* ---- Drag indicator ---- */
-    .drop-indicator {
-      height: 3px;
-      background: #4a90d9;
-      border-radius: 2px;
-      margin: -2px 0;
-      pointer-events: none;
-      display: none;
-    }
-    .drop-indicator.visible { display: block; }
-
-    /* ---- Timer bar background fill ---- */
-    .item .bar {
-      position: absolute;
-      inset: 0;
-      background: #4ade80;
-      width: 0%;
-      transition: width 0.25s linear;
-      pointer-events: none;
-      border-radius: 10px;
-    }
-    .item.done .bar { background: #c6f0d4; }
-
-    /* ---- Item content sits above bar ---- */
-    .item-content {
-      position: relative;
-      z-index: 1;
-      display: flex;
-      align-items: center;
-      width: 100%;
-      padding: 10px 14px;
-      gap: 10px;
-    }
-
-    .item-label {
-      flex: 1;
-      font-size: 0.95rem;
-      outline: none;
-      background: none;
-      border: none;
-      color: #333;
-      font-family: inherit;
-    }
-    .item-label::placeholder { color: #aaa; }
-    /* ---- Checked to-do: green fill like completed timer ---- */
-    .item.checked .bar { width: 100% !important; background: #c6f0d4; }
-    .item.checked .check-btn { color: #4ade80; }
-
-    /* ---- Timer display ---- */
-    .timer-display {
-      font-variant-numeric: tabular-nums;
-      font-size: 0.85rem;
-      color: #666;
-      white-space: nowrap;
-      min-width: 100px;
-      text-align: right;
-    }
-
-    /* ---- Buttons ---- */
-    .btn {
-      background: none;
-      border: none;
-      color: #999;
-      cursor: pointer;
-      font-size: 1.05rem;
-      padding: 4px;
-      line-height: 1;
-      border-radius: 4px;
-      transition: color 0.15s, background 0.15s;
-    }
-    .btn:hover { color: #333; background: rgba(0,0,0,0.05); }
-
-    .check-btn { font-size: 1.1rem; }
-    .check-btn.checked { color: #4ade80; }
-
-    /* ---- Time input (for setting duration) ---- */
-    .time-input {
-      width: 64px;
-      background: rgba(0,0,0,0.03);
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      color: #333;
-      font-family: inherit;
-      font-size: 0.85rem;
-      padding: 3px 6px;
-      text-align: center;
-      font-variant-numeric: tabular-nums;
-    }
-    .time-input:focus { border-color: #4a90d9; outline: none; }
-
-    /* ---- Notes area ---- */
-    .notes-toggle {
-      background: none;
-      border: none;
-      color: #bbb;
-      cursor: pointer;
-      padding: 2px 4px;
-      transition: color 0.15s;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .notes-toggle svg { width: 12px; height: 12px; display: block; }
-    .notes-toggle:hover { color: #666; }
-    .notes-toggle.has-notes { color: #4a90d9; }
-
-    .notes-area {
-      display: none;
-      position: relative;
-      z-index: 1;
-      padding: 0 14px 10px 42px;
-    }
-    .notes-area.open { display: block; }
-
-    /* ---- Quill overrides ---- */
-    .notes-area .ql-toolbar {
-      border: 1px solid #e0e0e0;
-      border-radius: 6px 6px 0 0;
-      background: #f9f9fb;
-      padding: 4px 6px;
-    }
-    .notes-area .ql-container {
-      border: 1px solid #e0e0e0;
-      border-top: none;
-      border-radius: 0 0 6px 6px;
-      background: #fff;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 0.85rem;
-      color: #444;
-      min-height: 60px;
-    }
-    .notes-area .ql-editor {
-      min-height: 60px;
-      padding: 8px;
-    }
-    .notes-area .ql-editor.ql-blank::before {
-      color: #aaa;
-      font-style: normal;
-    }
-
-    /* ---- Add buttons row ---- */
-    #add-row {
-      width: 100%;
-      max-width: 640px;
-      display: flex;
-      gap: 8px;
-      margin-top: 16px;
-    }
-    .add-btn {
-      flex: 1;
-      padding: 6px 12px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      background: none;
-      color: #999;
-      font-family: inherit;
-      font-size: 0.8rem;
-      cursor: pointer;
-      transition: border-color 0.15s, color 0.15s;
-    }
-    .add-btn:hover { border-color: #999; color: #555; }
-    .archive-btn { border-color: #a0b4c8; color: #a0b4c8; }
-    .archive-btn:hover { border-color: #7a96b0; color: #7a96b0; }
-    .voice-btn { border-color: #c8a0a0; color: #c8a0a0; }
-    .voice-btn:hover { border-color: #b07a7a; color: #b07a7a; }
-    .voice-btn.recording { border-color: #e74c3c; color: #e74c3c; animation: pulse-border 1s infinite; }
-    @keyframes pulse-border { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-    #voice-status { width: 100%; max-width: 640px; text-align: center; font-size: 0.85rem; color: #888; margin-top: 6px; min-height: 1.2em; }
-
-    /* ---- Mobile / phone view ---- */
-    @media (max-width: 600px) {
-      body { padding: 56px 10px 20px; }
-      #clock { font-size: 3.2rem; letter-spacing: 2px; }
-      #date { font-size: 0.95rem; margin-bottom: 24px; }
-      .item-content { padding: 8px 10px; gap: 6px; }
-      .item-label { font-size: 0.9rem; min-width: 0; }
-      .timer-display {
-        min-width: 0;
-        font-size: 0.75rem;
-        display: flex;
-        align-items: center;
-        gap: 2px;
-      }
-      .time-input {
-        width: 48px;
-        font-size: 0.72rem;
-        padding: 2px 3px;
-      }
-      .btn { padding: 4px 2px; font-size: 1rem; }
-      .check-btn { font-size: 1rem; }
-      .notes-area { padding: 0 10px 10px 36px; }
-      .add-btn { font-size: 0.75rem; padding: 6px 8px; }
-    }
-
-    /* ---- Fullscreen toggle ---- */
-    #fs-btn {
+    .glow {
       position: fixed;
-      top: 12px;
-      right: 16px;
-      background: none;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      color: #aaa;
-      cursor: pointer;
-      font-size: 1rem;
-      padding: 6px 10px;
-      line-height: 1;
-      transition: color 0.15s, border-color 0.15s;
-      z-index: 100;
+      width: 60vw; height: 60vw; max-width: 700px; max-height: 700px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--accent-glow), transparent 70%);
+      top: -15%; right: -15%;
+      filter: blur(40px);
+      pointer-events: none;
+      z-index: 0;
+      transition: background 1.5s ease;
     }
-    #fs-btn:hover { color: #555; border-color: #999; }
 
-    /* ---- Auth ---- */
+    .app {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 56px 28px 80px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ──────── Top chrome (auth + fullscreen) ──────── */
     #auth-bar {
       position: fixed;
       top: 12px;
@@ -288,252 +62,591 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      z-index: 100;
+      z-index: 50;
+      font-size: 11px;
+      color: var(--text-dim);
     }
     #sign-in-btn {
-      background: #fff;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      color: #555;
-      cursor: pointer;
-      font-family: inherit;
-      font-size: 0.85rem;
-      padding: 6px 14px;
+      background: var(--surface);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      color: var(--text-dim);
+      font-size: 11px;
+      padding: 6px 12px;
+      letter-spacing: 0.3px;
       transition: border-color 0.15s, color 0.15s;
     }
-    #sign-in-btn:hover { border-color: #999; color: #222; }
+    #sign-in-btn:hover { border-color: var(--border-hi); color: var(--text); }
     #user-info {
       display: none;
       align-items: center;
       gap: 8px;
-      font-size: 0.8rem;
-      color: #888;
     }
     #user-info img {
-      width: 28px;
-      height: 28px;
+      width: 22px; height: 22px;
       border-radius: 50%;
+      opacity: 0.9;
     }
     #sign-out-btn {
       background: none;
       border: none;
-      color: #aaa;
-      cursor: pointer;
-      font-size: 0.75rem;
+      color: var(--text-mute);
+      font-size: 10px;
       text-decoration: underline;
+      padding: 0;
     }
-    #sign-out-btn:hover { color: #555; }
+    #sign-out-btn:hover { color: var(--text-dim); }
     #sync-status {
-      font-size: 0.75rem;
-      color: #4ade80;
-      margin-left: 4px;
+      font-size: 10px;
+      color: var(--text-mute);
+      letter-spacing: 0.3px;
       transition: opacity 0.3s;
     }
-    #sync-status.error { color: #e74c3c; }
-    #sync-status.local { color: #f0ad4e; }
+    #sync-status.error { color: #e07868; }
+    #sync-status.local { color: var(--accent); }
 
-    /* ---- Task List (Notion) ---- */
-    #notion-section {
-      width: 100%;
-      max-width: 640px;
-      margin-top: 32px;
+    #fs-btn, #settings-btn {
+      position: fixed;
+      top: 12px;
+      background: var(--surface);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      color: var(--text-dim);
+      font-size: 12px;
+      padding: 6px 10px;
+      line-height: 1;
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 50;
+      transition: color 0.15s, border-color 0.15s;
     }
-    #notion-header {
+    #fs-btn { right: 16px; }
+    #settings-btn { right: 56px; font-size: 13px; }
+    #fs-btn:hover, #settings-btn:hover { color: var(--text); border-color: var(--border-hi); }
+
+    /* ──────── Header ──────── */
+    header.top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 36px;
+    }
+    .clock {
+      font-family: 'Fraunces', serif;
+      font-weight: 300;
+      font-size: clamp(44px, 7vw, 60px);
+      line-height: 1;
+      letter-spacing: -0.5px;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+      font-variation-settings: "SOFT" 100, "opsz" 144;
+    }
+    .date {
+      font-family: 'Fraunces', serif;
+      font-style: italic;
+      font-size: 14px;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+    .phase {
+      color: var(--accent);
+      font-style: normal;
+      font-weight: 500;
+      font-family: 'Geist', sans-serif;
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-left: 8px;
+    }
+    .weather-pill {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 14px;
+      background: var(--surface);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-family: 'Geist', system-ui, sans-serif;
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 0.3px;
+      font-variant-numeric: tabular-nums;
+      font-weight: 500;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .weather-pill .glyph { color: var(--accent); font-size: 13px; line-height: 1; }
+
+    /* ──────── Section head ──────── */
+    .section-head {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      font-weight: 500;
+      margin-bottom: 12px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 10px;
     }
-    #notion-header-left {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      cursor: pointer;
-      user-select: none;
-    }
-    #notion-header-left h2 {
-      font-size: 0.95rem;
-      font-weight: 600;
-      color: #666;
+    .section-head .meta {
+      font-family: 'Geist', system-ui, sans-serif;
+      font-size: 10px;
+      color: var(--text-mute);
       letter-spacing: 0.5px;
-      text-transform: uppercase;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+      text-transform: none;
     }
-    #notion-toggle-wedge {
-      color: #999;
-      transition: transform 0.2s;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 12px;
-      height: 12px;
-    }
-    #notion-toggle-wedge svg { width: 100%; height: 100%; display: block; }
-    #notion-toggle-wedge.collapsed { transform: rotate(-90deg); }
-    #notion-header .notion-actions {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-    .notion-action-btn {
-      background: none;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      color: #999;
-      cursor: pointer;
-      font-size: 0.8rem;
-      padding: 4px 10px;
-      font-family: inherit;
-      transition: color 0.15s, border-color 0.15s;
-    }
-    .notion-action-btn:hover { color: #555; border-color: #999; }
-    .notion-action-btn.archive { border-color: #a0b4c8; color: #a0b4c8; }
-    .notion-action-btn.archive:hover { border-color: #7a96b0; color: #7a96b0; }
-    .notion-action-btn.voice { border-color: #c8a0a0; color: #c8a0a0; }
-    .notion-action-btn.voice:hover { border-color: #b07a7a; color: #b07a7a; }
-    .notion-action-btn.voice.recording { border-color: #e74c3c; color: #e74c3c; border-style: solid; animation: pulse-border 1s infinite; }
-    #notion-status { font-size: 0.75rem; color: #aaa; }
-    #notion-voice-status { width: 100%; text-align: center; font-size: 0.85rem; color: #888; }
-    #notion-voice-status:empty { display: none; }
 
-    #notion-body { transition: max-height 0.3s ease, opacity 0.2s ease; overflow: hidden; }
-    #notion-body.collapsed { max-height: 0 !important; opacity: 0; }
-
-    #notion-list {
+    #list, #backlog {
       display: flex;
       flex-direction: column;
       gap: 6px;
     }
-    .notion-task {
-      background: #fff;
-      border: 1px solid #e0e0e0;
-      border-radius: 8px;
+
+    /* ──────── Item row ──────── */
+    .item {
+      position: relative;
+      background: var(--surface);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 10px;
       overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      transition: opacity 0.2s;
+      min-height: 48px;
+      transition: border-color 0.2s;
     }
-    .notion-task.checked-done { background: #f0faf0; }
-    .notion-task.checked-done .nt-title { color: #888; }
-    .notion-task-row {
+    .item.dragging { opacity: 0.4; }
+    .item.running { border-color: var(--accent-mid); }
+    .item:hover { border-color: var(--border-hi); }
+    .item.checked:not(.timer) .bar-fill { background: var(--bar-done); }
+
+    .drop-indicator {
+      height: 2px;
+      background: var(--accent);
+      border-radius: 1px;
+      margin: -2px 0;
+      display: none;
+      pointer-events: none;
+    }
+    .drop-indicator.visible { display: block; }
+
+    .bar-fill {
+      position: absolute; inset: 0;
+      width: 0%;
+      background: var(--bar-fill);
+      transition: width 0.35s ease, background 0.6s ease;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .item.done .bar-fill { background: var(--bar-done); }
+
+    .playhead {
+      position: absolute; top: 0; bottom: 0;
+      width: 2px;
+      background: var(--accent);
+      transform: translateX(-1px);
+      pointer-events: none;
+      transition: left 0.35s ease;
+      z-index: 1;
+    }
+    .item.running .playhead {
+      box-shadow: 0 0 12px var(--accent), 0 0 3px var(--accent);
+    }
+    .item.done .playhead,
+    .item:not(.has-progress) .playhead { display: none; }
+
+    .scrub-handle {
+      position: absolute; top: 0; bottom: 0;
+      width: 18px;
+      transform: translateX(-50%);
+      cursor: ew-resize;
+      z-index: 2;
+      touch-action: none;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .scrub-handle::before {
+      content: '';
+      width: 4px; height: 20px;
+      border-radius: 2px;
+      background: var(--accent);
+      box-shadow: 0 0 0 1.5px var(--bg-solid), 0 1px 4px rgba(0,0,0,0.25);
+      opacity: 0.85;
+      transition: opacity 0.15s, transform 0.15s;
+    }
+    .item:hover .scrub-handle::before { opacity: 1; transform: scaleY(1.15); }
+    .scrub-handle:active::before { transform: scaleY(1.25); }
+    .item.done .scrub-handle,
+    .item:not(.has-progress) .scrub-handle { display: none; }
+
+    .item-content {
+      position: relative;
+      z-index: 3;
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 10px 14px;
+      padding: 10px 13px;
     }
-    .notion-task .nt-check {
-      background: none;
-      border: none;
-      font-size: 1.1rem;
-      cursor: pointer;
-      color: #ccc;
+
+    .check-btn {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      border: 1.5px solid var(--text-mute);
+      background: transparent;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-size: 10px;
+      color: var(--bg-solid);
+      font-weight: 600;
       padding: 0;
-      line-height: 1;
+      transition: all 0.15s;
     }
-    .notion-task .nt-check.done { color: #4ade80; }
-    .notion-task .nt-title {
+    .check-btn.on {
+      border-color: var(--accent);
+      background: var(--accent);
+    }
+    .check-btn:hover { border-color: var(--accent); }
+
+    .item-label {
       flex: 1;
-      font-size: 0.9rem;
-      color: #333;
+      background: transparent;
       border: none;
-      background: none;
-      font-family: inherit;
+      outline: none;
+      font-size: 14px;
+      color: var(--text);
+      min-width: 0;
+    }
+    .item-label::placeholder { color: var(--text-mute); }
+    .item.done .item-label { opacity: 0.5; }
+    .item.checked:not(.timer) .item-label { text-decoration: line-through; opacity: 0.5; }
+
+    .play-btn {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px;
+      padding: 0;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+    .play-btn:hover {
+      background: var(--accent);
+      color: var(--bg-solid);
+      border-color: var(--accent);
+    }
+
+    .timer-display {
+      font-family: 'Geist', system-ui, sans-serif;
+      font-size: 11px;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+      color: var(--text-dim);
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .time-input {
+      width: 58px;
+      background: rgba(0,0,0,0.08);
+      border: 1px solid transparent;
+      border-radius: 4px;
+      padding: 2px 4px;
+      text-align: center;
+      font: inherit;
+      color: inherit;
+      font-size: 11px;
+    }
+    .time-input:focus {
+      border-color: var(--accent);
+      background: var(--surface-hi);
       outline: none;
     }
-    .notion-task .nt-title:focus { border-bottom: 1px solid #4a90d9; }
-    .notion-task .nt-due {
-      font-size: 0.75rem;
-      color: #999;
-      white-space: nowrap;
+
+    .time-adjust {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      margin-left: 2px;
     }
-    .notion-task .nt-due.overdue { color: #e74c3c; }
-    .notion-task .nt-notes-toggle {
-      background: none;
-      border: none;
-      color: #bbb;
-      cursor: pointer;
-      padding: 2px 4px;
-      transition: color 0.15s;
-      display: inline-flex;
+    .time-adjust button {
+      width: 16px; height: 10px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-mute);
+      border-radius: 2px;
+      padding: 0;
+      display: flex;
       align-items: center;
       justify-content: center;
     }
-    .notion-task .nt-notes-toggle svg { width: 12px; height: 12px; display: block; }
-    .notion-task .nt-notes-toggle:hover { color: #666; }
-    .notion-task .nt-notes-toggle.has-content { color: #4a90d9; }
-    .notion-task .nt-archive {
-      background: none;
-      border: none;
-      color: #ccc;
-      cursor: pointer;
-      font-size: 0.9rem;
-      padding: 2px;
-      transition: color 0.15s;
-    }
-    .notion-task .nt-archive:hover { color: #e74c3c; }
+    .time-adjust button:hover { color: var(--text); border-color: var(--text-dim); }
+    .time-adjust svg { width: 7px; height: 4px; display: block; }
 
-    .nt-notes-area {
+    .icon-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-mute);
+      width: 24px; height: 24px;
+      border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0;
+      flex-shrink: 0;
+      font-size: 12px;
+      transition: color 0.15s, background 0.15s;
+    }
+    .icon-btn:hover { color: var(--text); background: rgba(255,255,255,0.06); }
+    .icon-btn.has-notes { color: var(--accent); }
+    .icon-btn svg { width: 11px; height: 11px; display: block; }
+
+    .notes-area {
       display: none;
       padding: 0 14px 10px 42px;
+      position: relative;
+      z-index: 3;
     }
-    .nt-notes-area.open { display: block; }
-    .nt-notes-area .nt-notes-content {
-      font-size: 0.85rem;
-      color: #555;
-      line-height: 1.6;
-      min-height: 20px;
+    .notes-area.open { display: block; }
+    .notes-area textarea {
+      width: 100%;
+      background: rgba(0,0,0,0.12);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+      color: var(--text);
+      font-size: 13px;
+      resize: vertical;
+      min-height: 54px;
+      outline: none;
+      font-family: 'Geist', sans-serif;
+      line-height: 1.5;
     }
-    .nt-notes-area .nt-notes-content h3 { font-size: 1rem; margin: 8px 0 4px; color: #333; }
-    .nt-notes-area .nt-notes-content h4 { font-size: 0.95rem; margin: 6px 0 3px; color: #333; }
-    .nt-notes-area .nt-notes-content h5 { font-size: 0.9rem; margin: 4px 0 2px; color: #444; }
-    .nt-notes-area .nt-notes-content div { margin: 2px 0; }
-    .nt-notes-area .nt-notes-content code { background: #f0f0f0; padding: 1px 4px; border-radius: 3px; font-size: 0.8rem; }
-    .nt-notes-area .nt-notes-content a { color: #4a90d9; text-decoration: none; }
-    .nt-notes-area .nt-notes-content a:hover { text-decoration: underline; }
-    .nt-notes-area .nt-todo-checkbox { cursor: pointer; margin-right: 4px; accent-color: #4ade80; }
-    .nt-notes-area .nt-todo-block { display: flex; align-items: center; gap: 2px; }
-    .nt-notes-area .nt-block-text { outline: none; border-radius: 3px; padding: 0 2px; }
-    .nt-notes-area .nt-block-text:focus { background: #f5f9ff; box-shadow: 0 0 0 1px #c7dcf5; }
-    .nt-notes-area .nt-block-text.saving { background: #fff8e1; }
-    .nt-notes-area .nt-block-text.saved { background: #e8f7e8; transition: background 0.8s; }
-    .nt-notes-area .nt-notes-loading {
-      font-size: 0.8rem;
-      color: #aaa;
-      font-style: italic;
+    .notes-area textarea:focus { border-color: var(--accent); }
+
+    /* ──────── Add row ──────── */
+    .add-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 14px;
+      margin-bottom: 36px;
+    }
+    .add-btn {
+      flex: 1;
+      padding: 8px 10px;
+      background: var(--surface);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-dim);
+      font-size: 12px;
+      letter-spacing: 0.2px;
+      transition: all 0.15s;
+    }
+    .add-btn:hover { color: var(--text); border-color: var(--border-hi); }
+    .add-btn.recording {
+      color: #e07868;
+      border-color: #e07868;
+      animation: pulseBorder 1.2s infinite;
+    }
+    @keyframes pulseBorder { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+    #voice-status {
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-mute);
+      margin-top: -28px;
+      margin-bottom: 28px;
+      min-height: 1em;
+    }
+    #voice-status:empty { display: none; }
+
+    /* ──────── Backlog section ──────── */
+    .backlog-head { margin-top: 0; margin-bottom: 10px; }
+    .backlog-head .actions {
+      display: flex;
+      gap: 6px;
+    }
+    .backlog-head .sm-btn {
+      padding: 3px 9px;
+      font-size: 11px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-dim);
+      letter-spacing: 0.2px;
+      text-transform: none;
+      font-weight: 500;
+    }
+    .backlog-head .sm-btn:hover { color: var(--text); border-color: var(--border-hi); }
+    .backlog-head .sm-btn.recording {
+      color: #e07868;
+      border-color: #e07868;
+      animation: pulseBorder 1.2s infinite;
     }
 
-    #notion-new-row {
-      display: none;
-      gap: 8px;
-      margin-top: 6px;
+    .backlog-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 13px;
+      background: var(--surface);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      transition: border-color 0.15s, opacity 0.2s;
     }
-    #notion-new-row.open { display: flex; }
-    #notion-new-input {
+    .backlog-item:hover { border-color: var(--border-hi); }
+    .backlog-item.done { opacity: 0.5; }
+    .backlog-item.done .title { text-decoration: line-through; }
+    .backlog-item .check-btn { width: 15px; height: 15px; font-size: 9px; }
+    .backlog-item .title {
+      flex: 1;
+      font-size: 13px;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      min-width: 0;
+    }
+    .backlog-item .due {
+      font-family: 'Geist', system-ui, sans-serif;
+      font-size: 10px;
+      color: var(--text-mute);
+      letter-spacing: 0.3px;
+      font-variant-numeric: tabular-nums;
+      font-weight: 500;
+    }
+    .backlog-item .due.overdue { color: #e08866; }
+    .backlog-item .icon-btn { width: 18px; height: 18px; }
+
+    #backlog-new-row {
+      display: none;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    #backlog-new-row.open { display: flex; }
+    #backlog-new-input {
       flex: 1;
       padding: 8px 12px;
-      border: 1px solid #ddd;
+      background: var(--surface);
+      border: 1px solid var(--border);
       border-radius: 8px;
-      font-family: inherit;
-      font-size: 0.9rem;
+      font-size: 13px;
+      color: var(--text);
       outline: none;
     }
-    #notion-new-input:focus { border-color: #4a90d9; }
-    #notion-new-submit {
+    #backlog-new-input:focus { border-color: var(--accent); }
+    #backlog-new-submit {
       padding: 8px 16px;
-      border: none;
+      border: 1px solid var(--accent);
       border-radius: 8px;
-      background: #4a90d9;
-      color: #fff;
-      cursor: pointer;
-      font-family: inherit;
-      font-size: 0.85rem;
+      background: var(--accent);
+      color: var(--bg-solid);
+      font-size: 12px;
+      font-weight: 500;
     }
-    #notion-new-submit:hover { background: #3a7bc8; }
+
+    /* ──────── Settings panel ──────── */
+    #settings-panel {
+      position: fixed;
+      top: 56px;
+      right: 16px;
+      width: 260px;
+      background: var(--surface-hi);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border-hi);
+      border-radius: 12px;
+      padding: 14px 16px 16px;
+      z-index: 60;
+      display: none;
+      color: var(--text);
+      box-shadow: 0 8px 28px rgba(0,0,0,0.22);
+    }
+    #settings-panel.open { display: block; }
+    #settings-panel h3 {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      font-weight: 500;
+      margin-bottom: 12px;
+    }
+    #settings-panel .field {
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    #settings-panel label {
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 0.3px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    #settings-panel label .val {
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+    }
+    #settings-panel input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+    #settings-panel select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 4px 8px;
+      font-size: 12px;
+      outline: none;
+    }
+    #settings-panel select:focus { border-color: var(--accent); }
+    #settings-panel .row-check {
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text);
+    }
+    #settings-panel input[type="checkbox"] {
+      accent-color: var(--accent);
+    }
+    #settings-panel .hint {
+      margin-top: 8px;
+      font-size: 10px;
+      color: var(--text-mute);
+      letter-spacing: 0.3px;
+    }
+
+    /* ──────── Responsive ──────── */
+    @media (max-width: 720px) {
+      .app { padding: 44px 16px 60px; }
+      header.top {
+        flex-direction: column;
+        align-items: flex-start;
+        margin-bottom: 28px;
+      }
+      .clock { font-size: 42px; }
+      .item-content { padding: 9px 10px; gap: 7px; }
+      .item-label { font-size: 13.5px; }
+      .timer-display { font-size: 10px; }
+      .time-input { width: 46px; font-size: 10px; }
+      .add-btn { font-size: 11px; padding: 7px 6px; }
+      #settings-panel { right: 16px; left: 16px; width: auto; }
+    }
   </style>
 </head>
 <body>
 
+<div class="glow" id="glow"></div>
+
 <div id="auth-bar">
-  <button id="sign-in-btn" onclick="signIn()">Sign in with Google</button>
+  <button id="sign-in-btn" onclick="signIn()">Sign in</button>
   <div id="user-info">
     <img id="user-avatar" src="" alt="" />
     <span id="user-name"></span>
@@ -541,46 +654,226 @@
   </div>
   <span id="sync-status"></span>
 </div>
+<button id="settings-btn" onclick="toggleSettings()" title="Settings (,)">☼</button>
 <button id="fs-btn" onclick="toggleFullscreen()" title="Toggle fullscreen">&#x26F6;</button>
-<div id="clock">00:00:00</div>
-<div id="date"></div>
 
-<div id="list"></div>
+<div class="app">
+  <header class="top">
+    <div>
+      <div class="clock" id="clock">—</div>
+      <div class="date"><span id="date">—</span><span class="phase" id="phase"></span></div>
+    </div>
+    <div class="weather-pill">
+      <span class="glyph" id="weather-glyph">◐</span>
+      <span id="weather-text">58° · mostly cloudy · sunset 7:42</span>
+    </div>
+  </header>
 
-<div id="add-row">
-  <button class="add-btn voice-btn" id="voice-btn" onclick="toggleVoice()">+ Voice</button>
-  <button class="add-btn" onclick="addTodo()">+ To-do</button>
-  <button class="add-btn" onclick="addTimer()">+ Timer</button>
-  <button class="add-btn archive-btn" onclick="archiveAllChecked()">Archive</button>
+  <div class="section-head">
+    <span>Today <span id="today-meta" class="meta"></span></span>
+    <span class="meta" id="running-indicator"></span>
+  </div>
+  <div id="list"></div>
+
+  <div class="add-row">
+    <button class="add-btn" id="voice-btn" onclick="toggleVoice()">+ Voice</button>
+    <button class="add-btn" onclick="addTodo()">+ To-do</button>
+    <button class="add-btn" onclick="addTimer()">+ Timer</button>
+    <button class="add-btn" onclick="archiveAllChecked()">Archive</button>
+  </div>
+  <div id="voice-status"></div>
+
+  <div class="section-head backlog-head">
+    <span>Backlog · Notion <span id="backlog-meta" class="meta"></span></span>
+    <div class="actions">
+      <button class="sm-btn" id="backlog-voice-btn" onclick="toggleNotionVoice()">+ Voice</button>
+      <button class="sm-btn" onclick="toggleBacklogNew()">+ New</button>
+      <button class="sm-btn" onclick="loadNotionTasks()">↻</button>
+      <button class="sm-btn" onclick="notionArchiveAllDone()">Archive</button>
+    </div>
+  </div>
+  <div id="backlog-voice-status" style="text-align:center;font-size:11px;color:var(--text-mute);min-height:0;"></div>
+  <div id="backlog"></div>
+  <div id="backlog-new-row">
+    <input id="backlog-new-input" placeholder="New Notion task…" onkeydown="if(event.key==='Enter')submitBacklogNew()" />
+    <button id="backlog-new-submit" onclick="submitBacklogNew()">Add</button>
+  </div>
 </div>
-<div id="voice-status"></div>
 
-<div id="notion-section">
-  <div id="notion-header">
-    <div id="notion-header-left" onclick="toggleNotionCollapse()">
-      <span id="notion-toggle-wedge"><svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l4 4 4-4"/></svg></span>
-      <h2>Task List</h2>
-    </div>
-    <div class="notion-actions" id="notion-actions">
-      <span id="notion-status"></span>
-      <button class="notion-action-btn voice" id="notion-voice-btn" onclick="toggleNotionVoice()">+ Voice</button>
-      <button class="notion-action-btn" onclick="toggleNotionNew()">+ New</button>
-      <button class="notion-action-btn" onclick="loadNotionTasks()">↻ Refresh</button>
-      <button class="notion-action-btn archive" onclick="notionArchiveAllDone()">Archive</button>
-    </div>
+<div id="settings-panel" role="dialog" aria-label="Theme settings">
+  <h3>Theme</h3>
+  <div class="field">
+    <label>Hue <span class="val" id="hue-val">35</span></label>
+    <input type="range" id="hue-input" min="0" max="360" step="1" value="35" />
   </div>
-  <div id="notion-body">
-    <div id="notion-voice-status"></div>
-    <div id="notion-list"></div>
-    <div id="notion-new-row">
-      <input id="notion-new-input" placeholder="New task..." onkeydown="if(event.key==='Enter')submitNotionNew()" />
-      <button id="notion-new-submit" onclick="submitNotionNew()">Add</button>
-    </div>
+  <div class="field">
+    <label>Time of day</label>
+    <select id="phase-select">
+      <option value="auto">Auto (by time of day)</option>
+      <option value="dawn">Dawn</option>
+      <option value="day">Afternoon</option>
+      <option value="dusk">Golden hour</option>
+      <option value="night">Night</option>
+    </select>
   </div>
+  <div class="field row-check">
+    <input type="checkbox" id="mute-bell" />
+    <label for="mute-bell" style="cursor:pointer;">Mute completion bell</label>
+  </div>
+  <div class="hint">Press <kbd>,</kbd> to toggle this panel.</div>
 </div>
 
 <script>
-// ──────────── Firebase Init ────────────
+// ════════════════════════════════════════════════════════════════
+// Dusk theme engine — ported from design_handoff_my_desk_dusk/prototype/dusk-theme.js
+// ════════════════════════════════════════════════════════════════
+function duskPhaseForHour(hour) {
+  if (hour >= 5  && hour < 9)  return 'dawn';
+  if (hour >= 9  && hour < 17) return 'day';
+  if (hour >= 17 && hour < 21) return 'dusk';
+  return 'night';
+}
+function duskPhaseLabel(phase) {
+  return { dawn: 'dawn', day: 'afternoon', dusk: 'golden hour', night: 'night' }[phase];
+}
+function duskPalette(phase, hue) {
+  const H = hue;
+  const table = {
+    dawn: {
+      bg: `linear-gradient(180deg,
+             oklch(0.88 0.06 ${(H+10)%360}) 0%,
+             oklch(0.82 0.05 ${(H+330)%360}) 45%,
+             oklch(0.74 0.055 ${(H+280)%360}) 100%)`,
+      bgSolid:   `oklch(0.85 0.04 ${H})`,
+      text:      `oklch(0.24 0.03 ${(H+260)%360})`,
+      textDim:   `oklch(0.42 0.025 ${(H+260)%360})`,
+      textMute:  `oklch(0.55 0.02 ${(H+260)%360})`,
+      surface:   `oklch(0.98 0.01 ${H} / 0.58)`,
+      surfaceHi: `oklch(0.99 0.01 ${H} / 0.82)`,
+      border:    `oklch(0.24 0.03 ${(H+260)%360} / 0.12)`,
+      borderHi:  `oklch(0.24 0.03 ${(H+260)%360} / 0.22)`,
+      accent:    `oklch(0.58 0.15 ${H})`,
+      accentMid: `oklch(0.65 0.12 ${H})`,
+      accentGlow:`oklch(0.75 0.18 ${H} / 0.35)`,
+      barFill:   `oklch(0.42 0.12 ${H} / 0.55)`,
+      barDone:   `oklch(0.42 0.06 ${H} / 0.28)`,
+    },
+    day: {
+      bg: `linear-gradient(180deg,
+             oklch(0.86 0.035 ${(H+200)%360}) 0%,
+             oklch(0.88 0.03 ${H}) 55%,
+             oklch(0.84 0.045 ${(H+20)%360}) 100%)`,
+      bgSolid:   `oklch(0.87 0.03 ${H})`,
+      text:      `oklch(0.22 0.02 ${(H+240)%360})`,
+      textDim:   `oklch(0.42 0.02 ${(H+240)%360})`,
+      textMute:  `oklch(0.56 0.015 ${(H+240)%360})`,
+      surface:   `oklch(0.99 0.005 ${H} / 0.62)`,
+      surfaceHi: `oklch(1.00 0.005 ${H} / 0.85)`,
+      border:    `oklch(0.22 0.02 ${(H+240)%360} / 0.10)`,
+      borderHi:  `oklch(0.22 0.02 ${(H+240)%360} / 0.20)`,
+      accent:    `oklch(0.52 0.15 ${H})`,
+      accentMid: `oklch(0.60 0.12 ${H})`,
+      accentGlow:`oklch(0.72 0.16 ${H} / 0.28)`,
+      barFill:   `oklch(0.40 0.13 ${H} / 0.55)`,
+      barDone:   `oklch(0.40 0.06 ${H} / 0.26)`,
+    },
+    dusk: {
+      bg: `linear-gradient(180deg,
+             oklch(0.75 0.14 ${H}) 0%,
+             oklch(0.55 0.14 ${(H+340)%360}) 45%,
+             oklch(0.35 0.08 ${(H+290)%360}) 90%,
+             oklch(0.24 0.05 ${(H+280)%360}) 100%)`,
+      bgSolid:   `oklch(0.30 0.06 ${(H+290)%360})`,
+      text:      `oklch(0.94 0.025 ${H})`,
+      textDim:   `oklch(0.72 0.03 ${H})`,
+      textMute:  `oklch(0.56 0.03 ${H})`,
+      surface:   `oklch(0.22 0.04 ${(H+280)%360} / 0.55)`,
+      surfaceHi: `oklch(0.28 0.05 ${(H+280)%360} / 0.80)`,
+      border:    `oklch(0.94 0.025 ${H} / 0.14)`,
+      borderHi:  `oklch(0.94 0.025 ${H} / 0.30)`,
+      accent:    `oklch(0.80 0.17 ${H})`,
+      accentMid: `oklch(0.72 0.15 ${H})`,
+      accentGlow:`oklch(0.78 0.20 ${H} / 0.45)`,
+      barFill:   `oklch(0.70 0.14 ${H} / 0.55)`,
+      barDone:   `oklch(0.70 0.08 ${H} / 0.25)`,
+    },
+    night: {
+      bg: `linear-gradient(180deg,
+             oklch(0.18 0.04 ${(H+230)%360}) 0%,
+             oklch(0.22 0.05 ${(H+260)%360}) 55%,
+             oklch(0.16 0.04 ${(H+220)%360}) 100%)`,
+      bgSolid:   `oklch(0.18 0.04 ${(H+230)%360})`,
+      text:      `oklch(0.92 0.02 ${H})`,
+      textDim:   `oklch(0.68 0.02 ${H})`,
+      textMute:  `oklch(0.50 0.02 ${H})`,
+      surface:   `oklch(0.25 0.04 ${(H+240)%360} / 0.55)`,
+      surfaceHi: `oklch(0.32 0.05 ${(H+240)%360} / 0.80)`,
+      border:    `oklch(0.92 0.02 ${H} / 0.10)`,
+      borderHi:  `oklch(0.92 0.02 ${H} / 0.24)`,
+      accent:    `oklch(0.78 0.15 ${H})`,
+      accentMid: `oklch(0.70 0.13 ${H})`,
+      accentGlow:`oklch(0.72 0.16 ${H} / 0.30)`,
+      barFill:   `oklch(0.68 0.13 ${H} / 0.52)`,
+      barDone:   `oklch(0.68 0.07 ${H} / 0.22)`,
+    },
+  };
+  return table[phase];
+}
+function applyDuskTheme(phase, hue) {
+  const p = duskPalette(phase, hue);
+  const r = document.documentElement.style;
+  r.setProperty('--bg', p.bg);
+  r.setProperty('--bg-solid', p.bgSolid);
+  r.setProperty('--text', p.text);
+  r.setProperty('--text-dim', p.textDim);
+  r.setProperty('--text-mute', p.textMute);
+  r.setProperty('--surface', p.surface);
+  r.setProperty('--surface-hi', p.surfaceHi);
+  r.setProperty('--border', p.border);
+  r.setProperty('--border-hi', p.borderHi);
+  r.setProperty('--accent', p.accent);
+  r.setProperty('--accent-mid', p.accentMid);
+  r.setProperty('--accent-glow', p.accentGlow);
+  r.setProperty('--bar-fill', p.barFill);
+  r.setProperty('--bar-done', p.barDone);
+}
+
+// ════════════════════════════════════════════════════════════════
+// Preferences (hue, phase override, mute bell)
+// ════════════════════════════════════════════════════════════════
+const PREFS_KEY = 'desk-dusk-prefs';
+let prefs = loadPrefs();
+
+function loadPrefs() {
+  try {
+    const raw = localStorage.getItem(PREFS_KEY);
+    if (raw) {
+      const p = JSON.parse(raw);
+      return {
+        hue: Number.isFinite(p.hue) ? p.hue : 35,
+        phaseMode: p.phaseMode || 'auto',
+        muteBell: !!p.muteBell,
+      };
+    }
+  } catch {}
+  return { hue: 35, phaseMode: 'auto', muteBell: false };
+}
+function savePrefs() {
+  localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+}
+function effectivePhase() {
+  if (prefs.phaseMode && prefs.phaseMode !== 'auto') return prefs.phaseMode;
+  return duskPhaseForHour(new Date().getHours());
+}
+function applyTheme() {
+  applyDuskTheme(effectivePhase(), prefs.hue);
+  updateWeatherGlyph();
+  updatePhaseLabel();
+}
+
+// ════════════════════════════════════════════════════════════════
+// Firebase Init
+// ════════════════════════════════════════════════════════════════
 firebase.initializeApp({
   apiKey: "AIzaSyAl2npm6P_IXCM7HCjze9Agl9LRRJmP6cE",
   authDomain: "the-desk-b7e31.firebaseapp.com",
@@ -593,8 +886,6 @@ firebase.initializeApp({
 const auth = firebase.auth();
 const db = firebase.firestore();
 let currentUser = null;
-
-// ──────────── Auth ────────────
 const provider = new firebase.auth.GoogleAuthProvider();
 
 function signIn() { auth.signInWithPopup(provider); }
@@ -617,27 +908,46 @@ auth.onAuthStateChanged(user => {
   }
 });
 
-// ──────────── Clock & Date ────────────
+// ════════════════════════════════════════════════════════════════
+// Clock + phase tick
+// ════════════════════════════════════════════════════════════════
 function tickClock() {
   const now = new Date();
   document.getElementById('clock').textContent = now.toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit' });
-  const opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-  document.getElementById('date').textContent = now.toLocaleDateString('en-US', opts);
+  document.getElementById('date').textContent = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  updatePhaseLabel();
+  // If in auto mode, re-evaluate the phase (handles hour-boundary crossings without a full refresh).
+  if (prefs.phaseMode === 'auto') applyTheme();
 }
+function updatePhaseLabel() {
+  const phase = effectivePhase();
+  const el = document.getElementById('phase');
+  if (el) el.textContent = '· ' + duskPhaseLabel(phase).toUpperCase();
+}
+function updateWeatherGlyph() {
+  const glyphs = { dawn: '◐', day: '☀', dusk: '◑', night: '☾' };
+  const el = document.getElementById('weather-glyph');
+  if (el) el.textContent = glyphs[effectivePhase()];
+}
+
+// Apply theme immediately so the first paint is correct.
+applyTheme();
 tickClock();
 setInterval(tickClock, 1000);
 
-// ──────────── Sync Status ────────────
+// ════════════════════════════════════════════════════════════════
+// Sync status
+// ════════════════════════════════════════════════════════════════
 function setSyncStatus(msg, type) {
   const el = document.getElementById('sync-status');
   el.textContent = msg;
   el.className = type || '';
-  if (msg) setTimeout(() => {
-    if (el.textContent === msg) el.textContent = '';
-  }, 3000);
+  if (msg) setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 3000);
 }
 
-// ──────────── State ────────────
+// ════════════════════════════════════════════════════════════════
+// State
+// ════════════════════════════════════════════════════════════════
 let items = [];
 let _saveTimeout = null;
 
@@ -649,11 +959,7 @@ function save() {
     }
     return clean;
   });
-
-  // Always save to localStorage as backup
   localStorage.setItem('desktop-items', JSON.stringify(data));
-
-  // Save to Firestore if signed in
   if (currentUser) {
     clearTimeout(_saveTimeout);
     _saveTimeout = setTimeout(() => {
@@ -670,193 +976,270 @@ async function loadItems() {
       const doc = await db.collection('users').doc(currentUser.uid).get();
       if (doc.exists && doc.data().items) {
         items = doc.data().items;
-        setSyncStatus('☁ Loaded from cloud', '');
+        setSyncStatus('☁ Loaded', '');
       } else {
-        // First sign-in: migrate localStorage data to Firestore
         items = JSON.parse(localStorage.getItem('desktop-items') || '[]');
-        if (items.length > 0) {
-          save();
-          setSyncStatus('☁ Migrated to cloud', '');
-        }
+        if (items.length > 0) { save(); setSyncStatus('☁ Migrated', ''); }
       }
     } catch (e) {
       console.error('Firestore load error:', e);
       items = JSON.parse(localStorage.getItem('desktop-items') || '[]');
-      setSyncStatus('Cloud error — using local', 'error');
+      setSyncStatus('Cloud error', 'error');
     }
   } else {
     items = JSON.parse(localStorage.getItem('desktop-items') || '[]');
-    setSyncStatus('Local only — sign in to sync', 'local');
+    setSyncStatus('Local only', 'local');
   }
+  // Flatten any legacy Quill-delta notes to plain text on load.
+  items.forEach(i => { if (i.notes) i.notes = notesToPlain(i.notes); });
   renderAll();
   resumeTimers();
 }
 
-// ──────────── Rendering ────────────
+// Legacy Quill-delta notes → plain text. Fresh notes are already plain.
+function notesToPlain(s) {
+  if (!s) return '';
+  if (typeof s !== 'string') return String(s);
+  try {
+    const d = JSON.parse(s);
+    if (d && Array.isArray(d.ops)) {
+      return d.ops.map(op => typeof op.insert === 'string' ? op.insert : '').join('').replace(/\n+$/, '');
+    }
+  } catch {}
+  return s;
+}
+
+// ════════════════════════════════════════════════════════════════
+// Helpers
+// ════════════════════════════════════════════════════════════════
+function fmtTime(sec) {
+  sec = Math.max(0, Math.round(sec));
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+function parseTime(str) {
+  const parts = str.split(':').map(Number);
+  if (parts.some(isNaN)) return null;
+  if (parts.length === 3) return parts[0]*3600 + parts[1]*60 + parts[2];
+  if (parts.length === 2) return parts[0]*60 + parts[1];
+  if (parts.length === 1) return parts[0]*60;
+  return null;
+}
+function esc(s) { return (s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+function hasNotes(item) { return !!(item.notes && item.notes.trim()); }
+
+// ════════════════════════════════════════════════════════════════
+// Rendering
+// ════════════════════════════════════════════════════════════════
 const listEl = document.getElementById('list');
 
-// ── To-do ──
 function renderTodo(item, idx) {
   if (!item.notes) item.notes = '';
   const row = document.createElement('div');
-  row.className = 'item' + (item.checked ? ' checked' : '');
+  row.className = 'item todo' + (item.checked ? ' checked' : '');
   row.dataset.idx = idx;
+  row.setAttribute('draggable', 'true');
 
   row.innerHTML = `
-    <div class="bar"></div>
+    ${item.checked ? '<div class="bar-fill" style="width:100%"></div>' : ''}
     <div class="item-content">
-      <button class="btn check-btn ${item.checked ? 'checked' : ''}" title="Toggle">${item.checked ? '&#10003;' : '&#9675;'}</button>
-      <input class="item-label" value="${esc(item.label)}" placeholder="To-do..." />
-      <button class="btn notes-toggle ${hasNotes(item) ? 'has-notes' : ''}" title="Notes"><svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l4 4 4-4"/></svg></button>
-      <button class="btn delete-btn" title="Delete">&#10005;</button>
+      <button class="check-btn ${item.checked ? 'on' : ''}" data-act="check" title="Toggle">${item.checked ? '✓' : ''}</button>
+      <input class="item-label" value="${esc(item.label)}" placeholder="To-do…" />
+      <button class="icon-btn ${hasNotes(item) ? 'has-notes' : ''}" data-act="notes" title="Notes">
+        <svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l4 4 4-4"/></svg>
+      </button>
+      <button class="icon-btn" data-act="delete" title="Delete">✕</button>
     </div>
     <div class="notes-area ${item._notesOpen ? 'open' : ''}">
-      <div class="quill-editor"></div>
+      <textarea placeholder="Notes…">${esc(item.notes)}</textarea>
     </div>`;
 
-  row.querySelector('.check-btn').onclick = () => { item.checked = !item.checked; save(); renderAll(); };
-  row.querySelector('.item-label').addEventListener('input', e => { item.label = e.target.value; save(); });
-  row.querySelector('.notes-toggle').onclick = () => { item._notesOpen = !item._notesOpen; renderAll(); };
-  row.querySelector('.delete-btn').onclick = () => { archiveItem(idx); };
-  if (item._notesOpen) initQuill(row, item);
+  wireRow(row, item, idx);
   return row;
 }
 
-function updateNotesToggle(row, item) {
-  const toggle = row.querySelector('.notes-toggle');
-  const hasContent = item.notes && item.notes !== '' && item.notes !== '{"ops":[{"insert":"\\n"}]}';
-  if (hasContent) toggle.classList.add('has-notes');
-  else toggle.classList.remove('has-notes');
-}
-
-function initQuill(row, item) {
-  const container = row.querySelector('.quill-editor');
-  if (!container) return;
-  const quill = new Quill(container, {
-    theme: 'snow',
-    placeholder: 'Add notes...',
-    modules: {
-      toolbar: [
-        ['bold', 'italic', 'underline'],
-        [{ list: 'bullet' }, { list: 'ordered' }, { list: 'check' }],
-        ['clean']
-      ]
-    }
-  });
-  // Load content: support legacy plain text or Quill delta JSON
-  if (item.notes) {
-    try {
-      const delta = JSON.parse(item.notes);
-      if (delta.ops) { quill.setContents(delta); }
-      else { quill.setText(item.notes); }
-    } catch {
-      // legacy plain text
-      quill.setText(item.notes);
-    }
-  }
-  // Save on change
-  let saveTimer = null;
-  quill.on('text-change', () => {
-    item.notes = JSON.stringify(quill.getContents());
-    updateNotesToggle(row, item);
-    // debounce saves
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => save(), 500);
-  });
-  item._quill = quill;
-}
-
-// ── Timer ──
 function renderTimer(item, idx) {
   if (!item.notes) item.notes = '';
   const row = document.createElement('div');
   const pct = item.totalSeconds > 0 ? Math.min(100, (item.elapsed / item.totalSeconds) * 100) : 0;
   const done = pct >= 100;
-  row.className = 'item' + (done ? ' done' : '');
+  row.className = 'item timer has-progress' + (done ? ' done' : '') + (item.running ? ' running' : '');
   row.dataset.idx = idx;
-
-  const remaining = Math.max(0, item.totalSeconds - item.elapsed);
+  row.setAttribute('draggable', 'true');
 
   row.innerHTML = `
-    <div class="bar" style="width:${pct}%"></div>
+    <div class="bar-fill" style="width:${pct}%"></div>
+    <div class="playhead" style="left:${pct}%"></div>
+    <div class="scrub-handle" style="left:${pct}%" title="Drag to scrub"></div>
     <div class="item-content">
-      <button class="btn check-btn ${done ? 'checked' : ''}" title="${done ? 'Done' : 'Reset'}">
-        ${done ? '&#10003;' : '&#9675;'}
-      </button>
-      <input class="item-label" value="${esc(item.label)}" placeholder="Timer label..." />
-      <button class="btn play-btn" title="${item.running ? 'Pause' : 'Start'}">${item.running ? '&#9646;&#9646;' : '&#9654;'}</button>
+      <button class="check-btn ${done ? 'on' : ''}" data-act="reset" title="${done ? 'Reset' : 'Clear'}">${done ? '✓' : ''}</button>
+      <input class="item-label" value="${esc(item.label)}" placeholder="Timer…" />
+      <button class="play-btn" data-act="play" title="${item.running ? 'Pause' : 'Start'}">${item.running ? '❚❚' : '▶'}</button>
       <div class="timer-display">
-        <input class="time-input elapsed-input" value="${formatTime(item.elapsed)}" title="Elapsed time (mm:ss or hh:mm:ss)" /> / <input class="time-input" value="${formatTime(item.totalSeconds)}" title="Total time (mm:ss or hh:mm:ss)" />
+        <input class="time-input elapsed-input" value="${fmtTime(item.elapsed)}" data-act="elapsed" title="Elapsed" />
+        <span style="opacity:.5">/</span>
+        <input class="time-input total-input" value="${fmtTime(item.totalSeconds)}" data-act="total" title="Total" />
+        <span class="time-adjust">
+          <button data-act="up" title="+30 min"><svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M1 5l4-4 4 4"/></svg></button>
+          <button data-act="down" title="−30 min"><svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l4 4 4-4"/></svg></button>
+        </span>
       </div>
-      <button class="btn notes-toggle ${hasNotes(item) ? 'has-notes' : ''}" title="Notes"><svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l4 4 4-4"/></svg></button>
-      <button class="btn delete-btn" title="Delete">&#10005;</button>
+      <button class="icon-btn ${hasNotes(item) ? 'has-notes' : ''}" data-act="notes" title="Notes">
+        <svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l4 4 4-4"/></svg>
+      </button>
+      <button class="icon-btn" data-act="delete" title="Delete">✕</button>
     </div>
     <div class="notes-area ${item._notesOpen ? 'open' : ''}">
-      <div class="quill-editor"></div>
+      <textarea placeholder="Notes…">${esc(item.notes)}</textarea>
     </div>`;
 
-  row.querySelector('.item-label').addEventListener('input', e => { item.label = e.target.value; save(); });
+  wireRow(row, item, idx);
+  const handle = row.querySelector('.scrub-handle');
+  if (handle) attachScrub(row, item, handle);
+  return row;
+}
 
-  row.querySelector('.elapsed-input').addEventListener('change', e => {
-    const s = parseTime(e.target.value);
-    if (s !== null) {
-      item.elapsed = Math.min(s, item.totalSeconds);
+function wireRow(row, item, idx) {
+  // Click delegation for action buttons.
+  row.addEventListener('click', e => {
+    const btn = e.target.closest('[data-act]');
+    if (!btn) return;
+    const act = btn.dataset.act;
+    if (act === 'check') { item.checked = !item.checked; save(); renderAll(); }
+    else if (act === 'reset') {
+      if (item.elapsed >= item.totalSeconds) { item.elapsed = 0; item.running = false; stopInterval(item); save(); renderAll(); }
+    }
+    else if (act === 'play') toggleTimer(item, items.indexOf(item));
+    else if (act === 'delete') { stopInterval(item); archiveItem(items.indexOf(item)); }
+    else if (act === 'notes') { item._notesOpen = !item._notesOpen; renderAll(); }
+    else if (act === 'up') { item.totalSeconds += 1800; save(); renderAll(); }
+    else if (act === 'down') {
+      item.totalSeconds = Math.max(0, item.totalSeconds - 1800);
+      if (item.elapsed > item.totalSeconds) item.elapsed = item.totalSeconds;
       save(); renderAll();
     }
   });
 
-  row.querySelector('.time-input:not(.elapsed-input)').addEventListener('change', e => {
+  // Prevent click/drag bleed from inputs.
+  row.querySelectorAll('input, textarea, button').forEach(el => {
+    el.addEventListener('mousedown', e => e.stopPropagation());
+  });
+
+  const label = row.querySelector('.item-label');
+  if (label) label.addEventListener('input', e => { item.label = e.target.value; save(); });
+
+  const el = row.querySelector('.elapsed-input');
+  if (el) el.addEventListener('change', e => {
+    const s = parseTime(e.target.value);
+    if (s !== null) { item.elapsed = Math.min(Math.max(0, s), item.totalSeconds || 0); save(); renderAll(); }
+  });
+
+  const tot = row.querySelector('.total-input');
+  if (tot) tot.addEventListener('change', e => {
     const s = parseTime(e.target.value);
     if (s !== null) { item.totalSeconds = s; save(); renderAll(); }
   });
 
-  row.querySelector('.notes-toggle').onclick = () => { item._notesOpen = !item._notesOpen; renderAll(); };
-  if (item._notesOpen) initQuill(row, item);
-
-  row.querySelector('.check-btn').onclick = () => { if (done) { item.elapsed = 0; item.running = false; stopInterval(item); save(); renderAll(); } };
-  row.querySelector('.play-btn').onclick = () => { toggleTimer(item, idx); };
-  row.querySelector('.delete-btn').onclick = () => { stopInterval(item); archiveItem(idx); };
-
-  return row;
+  const ta = row.querySelector('.notes-area textarea');
+  if (ta) {
+    let t;
+    ta.addEventListener('input', () => {
+      item.notes = ta.value;
+      clearTimeout(t);
+      t = setTimeout(() => {
+        save();
+        // update has-notes dot without full re-render
+        const toggle = row.querySelector('[data-act="notes"]');
+        if (toggle) toggle.classList.toggle('has-notes', hasNotes(item));
+      }, 400);
+    });
+  }
 }
 
-// ──────────── Bell sound ────────────
+function attachScrub(row, item, handle) {
+  const startDrag = (e) => {
+    if (e.button !== undefined && e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const wasRunning = item.running;
+    const getX = ev => (ev.touches && ev.touches[0] ? ev.touches[0].clientX : ev.clientX);
+    if (wasRunning) { item.running = false; stopInterval(item); row.classList.remove('running'); }
+    const fill = row.querySelector('.bar-fill');
+    const head = row.querySelector('.playhead');
+    const onMove = ev => {
+      ev.preventDefault();
+      const rect = row.getBoundingClientRect();
+      if (rect.width <= 0) return;
+      const ratio = Math.max(0, Math.min(1, (getX(ev) - rect.left) / rect.width));
+      item.elapsed = ratio * (item.totalSeconds || 0);
+      const pct = ratio * 100;
+      if (fill) { fill.style.transition = 'none'; fill.style.width = pct + '%'; }
+      if (head) { head.style.transition = 'none'; head.style.left = pct + '%'; }
+      handle.style.left = pct + '%';
+      const ei = row.querySelector('.elapsed-input');
+      if (ei && ei !== document.activeElement) ei.value = fmtTime(item.elapsed);
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onUp);
+      document.removeEventListener('touchcancel', onUp);
+      const resume = wasRunning && item.elapsed < item.totalSeconds;
+      if (resume) item.running = true;
+      save();
+      renderAll();
+      if (resume) startInterval(item);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onUp);
+    document.addEventListener('touchcancel', onUp);
+  };
+  handle.addEventListener('mousedown', startDrag);
+  handle.addEventListener('touchstart', startDrag, { passive: false });
+}
+
+// ════════════════════════════════════════════════════════════════
+// Bell sound (mutable)
+// ════════════════════════════════════════════════════════════════
 function playBell() {
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  const frequencies = [523.25, 659.25, 783.99]; // C5, E5, G5
-  frequencies.forEach((freq, i) => {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(0.3, ctx.currentTime + i * 0.15);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.15 + 0.8);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start(ctx.currentTime + i * 0.15);
-    osc.stop(ctx.currentTime + i * 0.15 + 0.8);
-  });
+  if (prefs.muteBell) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const frequencies = [523.25, 659.25, 783.99];
+    frequencies.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine'; osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.25, ctx.currentTime + i * 0.15);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.15 + 0.8);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + i * 0.15);
+      osc.stop(ctx.currentTime + i * 0.15 + 0.8);
+    });
+  } catch {}
 }
 
-// ──────────── Timer engine ────────────
-const TICK = 250; // ms
-const SAVE_INTERVAL = 5000; // auto-save every 5 seconds while a timer runs
+// ════════════════════════════════════════════════════════════════
+// Timer engine
+// ════════════════════════════════════════════════════════════════
+const TICK = 250;
+const SAVE_INTERVAL = 5000;
 let _autoSaveInterval = null;
-
 function ensureAutoSave() {
   if (_autoSaveInterval) return;
   _autoSaveInterval = setInterval(() => {
-    const anyRunning = items.some(i => i.type === 'timer' && i.running);
-    if (anyRunning) {
-      save();
-    } else {
-      clearInterval(_autoSaveInterval);
-      _autoSaveInterval = null;
-    }
+    const any = items.some(i => i.type === 'timer' && i.running);
+    if (any) save();
+    else { clearInterval(_autoSaveInterval); _autoSaveInterval = null; }
   }, SAVE_INTERVAL);
 }
-
-function startInterval(item, idx) {
+function startInterval(item) {
   if (item._interval) return;
   ensureAutoSave();
   item._lastTick = Date.now();
@@ -873,91 +1256,77 @@ function startInterval(item, idx) {
       playBell();
       return;
     }
-    // Update bar + display without full re-render
     const row = listEl.children[items.indexOf(item)];
     if (!row) return;
     const pct = (item.elapsed / item.totalSeconds) * 100;
-    row.querySelector('.bar').style.width = pct + '%';
-    const elapsedInput = row.querySelector('.elapsed-input');
-    if (elapsedInput && elapsedInput !== document.activeElement) {
-      elapsedInput.value = formatTime(item.elapsed);
-    }
+    const fill = row.querySelector('.bar-fill');
+    const head = row.querySelector('.playhead');
+    const handle = row.querySelector('.scrub-handle');
+    if (fill) fill.style.width = pct + '%';
+    if (head) head.style.left = pct + '%';
+    if (handle) handle.style.left = pct + '%';
+    const ei = row.querySelector('.elapsed-input');
+    if (ei && ei !== document.activeElement) ei.value = fmtTime(item.elapsed);
   }, TICK);
+  updateRunningIndicator();
 }
-
 function stopInterval(item) {
   if (item._interval) { clearInterval(item._interval); item._interval = null; }
+  updateRunningIndicator();
 }
-
-function toggleTimer(item, idx) {
+function toggleTimer(item) {
   if (item.elapsed >= item.totalSeconds) return;
   item.running = !item.running;
-  if (item.running) { startInterval(item, idx); }
-  else { stopInterval(item); }
-  save();
-  renderAll();
+  if (item.running) startInterval(item); else stopInterval(item);
+  save(); renderAll();
 }
-
-// Resume any running timers on load
 function resumeTimers() {
-  items.forEach((item, idx) => {
-    if (item.type === 'timer' && item.running) {
-      startInterval(item, idx);
-    }
-  });
+  items.forEach(i => { if (i.type === 'timer' && i.running) startInterval(i); });
 }
 
-// ──────────── Helpers ────────────
-function formatTime(sec) {
-  sec = Math.round(sec);
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = sec % 60;
-  if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+function updateRunningIndicator() {
+  const el = document.getElementById('running-indicator');
+  if (!el) return;
+  const any = items.some(i => i.type === 'timer' && i.running);
+  el.textContent = any ? '● running' : '';
+  el.style.color = any ? 'var(--accent)' : 'var(--text-mute)';
 }
 
-function parseTime(str) {
-  const parts = str.split(':').map(Number);
-  if (parts.some(isNaN)) return null;
-  if (parts.length === 3) return parts[0]*3600 + parts[1]*60 + parts[2];
-  if (parts.length === 2) return parts[0]*60 + parts[1];
-  if (parts.length === 1) return parts[0]*60; // treat bare number as minutes
-  return null;
+// ════════════════════════════════════════════════════════════════
+// Today meta (hours planned)
+// ════════════════════════════════════════════════════════════════
+function updateTodayMeta() {
+  const el = document.getElementById('today-meta');
+  if (!el) return;
+  const totalSec = items.filter(i => i.type === 'timer').reduce((s,i) => s + (i.totalSeconds || 0), 0);
+  const hrs = totalSec / 3600;
+  el.textContent = hrs > 0 ? `· ${hrs.toFixed(1)} hrs planned` : '';
 }
 
-function esc(s) { return (s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
-
-function hasNotes(item) {
-  if (!item.notes || item.notes === '') return false;
-  try {
-    const delta = JSON.parse(item.notes);
-    if (delta.ops) return delta.ops.some(op => typeof op.insert === 'string' ? op.insert.trim() !== '' : true);
-  } catch {}
-  return item.notes.trim() !== '';
-}
-
+// ════════════════════════════════════════════════════════════════
+// Adders / archive
+// ════════════════════════════════════════════════════════════════
 function addTodo() {
   items.push({ type: 'todo', label: '', checked: false, notes: '' });
   save(); renderAll();
-  listEl.querySelector('.item:last-of-type .item-label').focus();
+  const last = listEl.querySelector('.item:last-of-type .item-label');
+  if (last) last.focus();
 }
-
 function addTimer() {
-  items.push({ type: 'timer', label: '', totalSeconds: 1500, elapsed: 0, running: false, notes: '' });
+  items.push({ type: 'timer', label: '', totalSeconds: 1800, elapsed: 0, running: false, notes: '' });
   save(); renderAll();
-  listEl.querySelector('.item:last-of-type .item-label').focus();
+  const last = listEl.querySelector('.item:last-of-type .item-label');
+  if (last) last.focus();
 }
-
 function archiveItem(idx) {
   const item = items.splice(idx, 1)[0];
+  if (!item) return;
   stopInterval(item);
   const archived = { ...item, archivedAt: new Date().toISOString() };
-  delete archived._interval; delete archived._lastTick; delete archived._notesOpen; delete archived._quill;
+  delete archived._interval; delete archived._lastTick; delete archived._notesOpen;
   saveArchive([archived]);
   save(); renderAll();
 }
-
 function archiveAllChecked() {
   const isDone = i => (i.type === 'todo' && i.checked) || (i.type === 'timer' && i.totalSeconds > 0 && i.elapsed >= i.totalSeconds);
   const done = items.filter(isDone);
@@ -965,27 +1334,24 @@ function archiveAllChecked() {
   done.forEach(i => { if (i._interval) stopInterval(i); });
   const toArchive = done.map(i => {
     const a = { ...i, archivedAt: new Date().toISOString() };
-    delete a._interval; delete a._lastTick; delete a._notesOpen; delete a._quill;
+    delete a._interval; delete a._lastTick; delete a._notesOpen;
     return a;
   });
   saveArchive(toArchive);
   items = items.filter(i => !isDone(i));
   save(); renderAll();
 }
-
-function saveArchive(archivedItems) {
+function saveArchive(arr) {
   if (!currentUser) return;
   const ref = db.collection('users').doc(currentUser.uid).collection('archive');
-  archivedItems.forEach(item => {
-    const clean = JSON.parse(JSON.stringify(item));
-    ref.add(clean);
-  });
+  arr.forEach(item => { ref.add(JSON.parse(JSON.stringify(item))); });
 }
 
-// ──────────── Drag & Drop reorder ────────────
+// ════════════════════════════════════════════════════════════════
+// Drag to reorder
+// ════════════════════════════════════════════════════════════════
 let dragIdx = null;
 let dropIndicator = null;
-
 function getDropIndicator() {
   if (!dropIndicator) {
     dropIndicator = document.createElement('div');
@@ -993,24 +1359,11 @@ function getDropIndicator() {
   }
   return dropIndicator;
 }
-
-function renderAll() {
-  listEl.innerHTML = '';
-  items.forEach((item, idx) => {
-    listEl.appendChild(item.type === 'timer' ? renderTimer(item, idx) : renderTodo(item, idx));
-  });
-  // attach drag listeners to the list container
-  setupDragOnList();
-}
-
 function setupDragOnList() {
   const rows = listEl.querySelectorAll('.item');
   rows.forEach(row => {
-    row.setAttribute('draggable', true);
-
     row.addEventListener('dragstart', e => {
-      // Don't drag when clicking buttons or inputs
-      if (e.target.closest('button, input, .notes-area')) {
+      if (e.target.closest('button, input, textarea, .notes-area, .scrub-handle')) {
         e.preventDefault();
         return;
       }
@@ -1018,7 +1371,6 @@ function setupDragOnList() {
       e.dataTransfer.effectAllowed = 'move';
       requestAnimationFrame(() => row.classList.add('dragging'));
     });
-
     row.addEventListener('dragend', () => {
       row.classList.remove('dragging');
       dragIdx = null;
@@ -1027,59 +1379,38 @@ function setupDragOnList() {
       if (ind.parentNode) ind.parentNode.removeChild(ind);
     });
   });
-
-  // Use the list container for dragover/drop so the indicator works between items
   listEl.ondragover = e => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
     if (dragIdx === null) return;
-
+    e.dataTransfer.dropEffect = 'move';
     const ind = getDropIndicator();
     const children = [...listEl.querySelectorAll('.item')];
     let insertBefore = null;
-
-    for (const child of children) {
-      const rect = child.getBoundingClientRect();
-      if (e.clientY < rect.top + rect.height / 2) {
-        insertBefore = child;
-        break;
-      }
+    for (const c of children) {
+      const r = c.getBoundingClientRect();
+      if (e.clientY < r.top + r.height / 2) { insertBefore = c; break; }
     }
-
-    if (insertBefore) {
-      listEl.insertBefore(ind, insertBefore);
-    } else {
-      listEl.appendChild(ind);
-    }
+    if (insertBefore) listEl.insertBefore(ind, insertBefore);
+    else listEl.appendChild(ind);
     ind.classList.add('visible');
   };
-
   listEl.ondragleave = e => {
-    // only hide if leaving the list entirely
     if (!listEl.contains(e.relatedTarget)) {
       const ind = getDropIndicator();
       ind.classList.remove('visible');
     }
   };
-
   listEl.ondrop = e => {
     e.preventDefault();
     const ind = getDropIndicator();
     ind.classList.remove('visible');
     if (dragIdx === null) return;
-
-    // figure out where the indicator is
     const children = [...listEl.querySelectorAll('.item')];
-    let dropIdx = children.length; // default: end
+    let dropIdx = children.length;
     for (let i = 0; i < children.length; i++) {
-      const rect = children[i].getBoundingClientRect();
-      if (e.clientY < rect.top + rect.height / 2) {
-        dropIdx = i;
-        break;
-      }
+      const r = children[i].getBoundingClientRect();
+      if (e.clientY < r.top + r.height / 2) { dropIdx = i; break; }
     }
-
-    // adjust for the fact we're removing from the original position
     const [moved] = items.splice(dragIdx, 1);
     const insertAt = dropIdx > dragIdx ? dropIdx - 1 : dropIdx;
     items.splice(insertAt, 0, moved);
@@ -1089,32 +1420,39 @@ function setupDragOnList() {
   };
 }
 
-// ──────────── Fullscreen ────────────
+function renderAll() {
+  listEl.innerHTML = '';
+  items.forEach((item, idx) => {
+    listEl.appendChild(item.type === 'timer' ? renderTimer(item, idx) : renderTodo(item, idx));
+  });
+  setupDragOnList();
+  updateTodayMeta();
+  updateRunningIndicator();
+}
+
+// ════════════════════════════════════════════════════════════════
+// Fullscreen
+// ════════════════════════════════════════════════════════════════
 function toggleFullscreen() {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen();
-  } else {
-    document.exitFullscreen();
-  }
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+  else document.exitFullscreen();
 }
 document.addEventListener('fullscreenchange', () => {
   document.getElementById('fs-btn').innerHTML = document.fullscreenElement ? '&#x2715;' : '&#x26F6;';
 });
 
-// ──────────── Voice Recording ────────────
+// ════════════════════════════════════════════════════════════════
+// Voice → Whisper → Claude pipeline (Today)
+// ════════════════════════════════════════════════════════════════
 let mediaRecorder = null;
 let audioChunks = [];
 const voiceBtn = document.getElementById('voice-btn');
 const voiceStatus = document.getElementById('voice-status');
 
 function toggleVoice() {
-  if (mediaRecorder && mediaRecorder.state === 'recording') {
-    stopVoice();
-  } else {
-    startVoice();
-  }
+  if (mediaRecorder && mediaRecorder.state === 'recording') stopVoice();
+  else startVoice();
 }
-
 async function startVoice() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -1126,24 +1464,22 @@ async function startVoice() {
       sendVoice(new Blob(audioChunks, { type: 'audio/webm' }));
     };
     mediaRecorder.start();
-    voiceBtn.textContent = 'Stop';
+    voiceBtn.textContent = '⏹ Stop';
     voiceBtn.classList.add('recording');
-    voiceStatus.textContent = 'Recording...';
+    voiceStatus.textContent = 'Recording…';
   } catch (err) {
     voiceStatus.textContent = 'Mic access denied';
     console.error('Mic error:', err);
   }
 }
-
 function stopVoice() {
   if (mediaRecorder && mediaRecorder.state === 'recording') {
     mediaRecorder.stop();
     voiceBtn.textContent = '+ Voice';
     voiceBtn.classList.remove('recording');
-    voiceStatus.textContent = 'Processing...';
+    voiceStatus.textContent = 'Processing…';
   }
 }
-
 async function sendVoice(blob) {
   try {
     const form = new FormData();
@@ -1153,11 +1489,10 @@ async function sendVoice(blob) {
     if (data.error) throw new Error(data.error);
     if (data.tasks && data.tasks.length > 0) {
       data.tasks.forEach(t => items.push(t));
-      save();
-      renderAll();
+      save(); renderAll();
       voiceStatus.textContent = `Added ${data.tasks.length} task${data.tasks.length > 1 ? 's' : ''}`;
     } else {
-      voiceStatus.textContent = 'No tasks found in recording';
+      voiceStatus.textContent = 'No tasks found';
     }
     setTimeout(() => { voiceStatus.textContent = ''; }, 3000);
   } catch (err) {
@@ -1167,198 +1502,67 @@ async function sendVoice(blob) {
   }
 }
 
-// ──────────── Notion Tasks ────────────
+// ════════════════════════════════════════════════════════════════
+// Notion backlog
+// ════════════════════════════════════════════════════════════════
 let notionTasks = [];
-let notionCollapsed = false;
-const notionListEl = document.getElementById('notion-list');
-const notionStatusEl = document.getElementById('notion-status');
+const backlogEl = document.getElementById('backlog');
+const backlogMetaEl = document.getElementById('backlog-meta');
 
-// ── Collapse/Expand ──
-function toggleNotionCollapse() {
-  notionCollapsed = !notionCollapsed;
-  document.getElementById('notion-body').classList.toggle('collapsed', notionCollapsed);
-  document.getElementById('notion-toggle-wedge').classList.toggle('collapsed', notionCollapsed);
-  document.getElementById('notion-actions').style.display = notionCollapsed ? 'none' : 'flex';
-}
-
-// ── Load ──
 async function loadNotionTasks() {
-  notionStatusEl.textContent = 'Loading...';
+  backlogMetaEl.textContent = '· loading…';
   try {
     const resp = await fetch('/api/notion');
     const data = await resp.json();
     if (data.error) throw new Error(data.error);
     notionTasks = data.tasks || [];
     renderNotionTasks();
-    notionStatusEl.textContent = '';
+    backlogMetaEl.textContent = notionTasks.length ? `· ${notionTasks.length}` : '';
   } catch (err) {
     console.error('Notion load error:', err);
-    notionStatusEl.textContent = 'Error loading';
-    setTimeout(() => { notionStatusEl.textContent = ''; }, 3000);
+    backlogMetaEl.textContent = '· error';
+    setTimeout(() => { backlogMetaEl.textContent = ''; }, 3000);
   }
 }
 
-// ── Render ──
 function renderNotionTasks() {
-  notionListEl.innerHTML = '';
-  if (notionTasks.length === 0) {
-    notionListEl.innerHTML = '<div style="text-align:center;color:#bbb;font-size:0.85rem;padding:16px;">No open tasks</div>';
+  backlogEl.innerHTML = '';
+  if (!notionTasks.length) {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'text-align:center;color:var(--text-mute);font-size:11px;padding:10px;';
+    empty.textContent = 'No open tasks';
+    backlogEl.appendChild(empty);
     return;
   }
   notionTasks.forEach(task => {
     const row = document.createElement('div');
     const isDone = task.doneStatus === 'Done';
-    row.className = 'notion-task' + (isDone ? ' checked-done' : '');
-
+    row.className = 'backlog-item' + (isDone ? ' done' : '');
     const dueStr = task.due ? formatDue(task.due) : '';
     const isOverdue = task.due && new Date(task.due) < new Date() && !isDone;
-    const hasContent = task._contentLoaded && task._content;
-
     row.innerHTML = `
-      <div class="notion-task-row">
-        <button class="nt-check ${isDone ? 'done' : ''}" title="${isDone ? 'Uncheck' : 'Mark done'}">${isDone ? '✓' : '○'}</button>
-        <input class="nt-title" value="${esc(task.title)}" />
-        ${dueStr ? `<span class="nt-due ${isOverdue ? 'overdue' : ''}">${dueStr}</span>` : ''}
-        <button class="nt-notes-toggle ${hasContent ? 'has-content' : ''}" title="Notes"><svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l4 4 4-4"/></svg></button>
-        <button class="nt-archive" title="Remove">✕</button>
-      </div>
-      <div class="nt-notes-area ${task._notesOpen ? 'open' : ''}">
-        <div class="${task._contentLoaded ? 'nt-notes-content' : 'nt-notes-loading'}">
-          ${task._contentLoaded ? (task._content || '<em style="color:#ccc">No content</em>') : 'Loading...'}
-        </div>
-      </div>
-    `;
-
-    row.querySelector('.nt-check').onclick = () => notionToggleDone(task);
-    row.querySelector('.nt-archive').onclick = () => notionArchive(task, row);
-    row.querySelector('.nt-notes-toggle').onclick = () => {
-      task._notesOpen = !task._notesOpen;
-      if (task._notesOpen && !task._contentLoaded) fetchNotionContent(task);
-      else renderNotionTasks();
-    };
-
+      <button class="check-btn ${isDone ? 'on' : ''}" data-act="check" title="${isDone ? 'Uncheck' : 'Mark done'}">${isDone ? '✓' : ''}</button>
+      <input class="title" value="${esc(task.title)}" />
+      ${dueStr ? `<span class="due ${isOverdue ? 'overdue' : ''}">${dueStr}</span>` : ''}
+      <button class="icon-btn" data-act="del" title="Remove">✕</button>`;
+    row.addEventListener('click', e => {
+      const btn = e.target.closest('[data-act]');
+      if (!btn) return;
+      if (btn.dataset.act === 'check') notionToggleDone(task);
+      else if (btn.dataset.act === 'del') notionArchive(task, row);
+    });
     let titleTimer = null;
-    row.querySelector('.nt-title').addEventListener('input', e => {
+    row.querySelector('.title').addEventListener('input', e => {
       clearTimeout(titleTimer);
       titleTimer = setTimeout(() => notionUpdateTitle(task, e.target.value), 800);
     });
-
-    notionListEl.appendChild(row);
-  });
-  // Wire up any checkboxes in already-loaded notes
-  setTimeout(() => wireNotionCheckboxes(), 0);
-}
-
-// ── Fetch page content ──
-async function fetchNotionContent(task) {
-  try {
-    const resp = await fetch('/api/notion', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'get_content', id: task.id })
-    });
-    const data = await resp.json();
-    task._content = data.content || '';
-    task._contentLoaded = true;
-    renderNotionTasks();
-    wireNotionCheckboxes(task);
-  } catch (err) {
-    console.error('Notion content error:', err);
-    task._content = 'Error loading content';
-    task._contentLoaded = true;
-    renderNotionTasks();
-  }
-}
-
-function wireNotionCheckboxes(task) {
-  // Find all checkboxes in the notes area and attach toggle handlers
-  const checkboxes = notionListEl.querySelectorAll(`.nt-todo-checkbox`);
-  checkboxes.forEach(cb => {
-    if (cb._wired) return;
-    cb._wired = true;
-    cb.addEventListener('change', async (e) => {
-      const blockId = cb.dataset.blockId;
-      const checked = cb.checked;
-      // Update visual immediately
-      const row = cb.closest('.nt-todo-block');
-      if (row) {
-        row.style.color = checked ? '#999' : '';
-        row.style.textDecoration = checked ? 'line-through' : '';
-      }
-      try {
-        await fetch('/api/notion', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'toggle_block_todo', block_id: blockId, checked: checked })
-        });
-      } catch (err) {
-        console.error('Toggle todo error:', err);
-        cb.checked = !checked; // revert
-      }
-    });
-  });
-
-  // Wire editable block text (contenteditable spans)
-  const editables = notionListEl.querySelectorAll('.nt-block-text');
-  editables.forEach(el => {
-    if (el._wired) return;
-    el._wired = true;
-    el._lastSaved = el.textContent.replace(/\u200B/g, '');
-
-    const save = async () => {
-      const text = el.textContent.replace(/\u200B/g, '');
-      if (text === el._lastSaved) return;
-      const blockId = el.dataset.blockId;
-      const blockType = el.dataset.blockType;
-      el.classList.add('saving');
-      try {
-        const resp = await fetch('/api/notion', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'update_block', block_id: blockId, block_type: blockType, text })
-        });
-        const data = await resp.json();
-        el.classList.remove('saving');
-        if (data.ok) {
-          el._lastSaved = text;
-          el.classList.add('saved');
-          setTimeout(() => el.classList.remove('saved'), 800);
-        } else {
-          el.classList.add('error');
-          console.error('Block save error:', data);
-        }
-      } catch (err) {
-        el.classList.remove('saving');
-        console.error('Block save error:', err);
-      }
-    };
-
-    let debounceTimer = null;
-    el.addEventListener('input', () => {
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(save, 900);
-    });
-    el.addEventListener('blur', () => {
-      clearTimeout(debounceTimer);
-      save();
-    });
-    el.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        el.blur();
-      }
-      if (e.key === 'Escape') {
-        el.textContent = el._lastSaved;
-        el.blur();
-      }
-    });
+    backlogEl.appendChild(row);
   });
 }
 
 function formatDue(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
-  const today = new Date();
-  today.setHours(0,0,0,0);
+  const today = new Date(); today.setHours(0,0,0,0);
   const diff = Math.floor((d - today) / 86400000);
   if (diff === 0) return 'Today';
   if (diff === 1) return 'Tomorrow';
@@ -1367,15 +1571,13 @@ function formatDue(dateStr) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-// ── Toggle Done ──
 async function notionToggleDone(task) {
   const newStatus = task.doneStatus === 'Done' ? 'Not started' : 'Done';
   task.doneStatus = newStatus;
   renderNotionTasks();
   try {
     await fetch('/api/notion', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'update', id: task.id, updates: { status: newStatus } })
     });
   } catch (err) {
@@ -1384,37 +1586,11 @@ async function notionToggleDone(task) {
     renderNotionTasks();
   }
 }
-
-// ── Archive All Done ──
-async function notionArchiveAllDone() {
-  const doneTasks = notionTasks.filter(t => t.doneStatus === 'Done');
-  if (doneTasks.length === 0) return;
-  notionStatusEl.textContent = `Archiving ${doneTasks.length}...`;
-  try {
-    await Promise.all(doneTasks.map(task =>
-      fetch('/api/notion', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'complete', id: task.id })
-      })
-    ));
-    notionTasks = notionTasks.filter(t => t.doneStatus !== 'Done');
-    renderNotionTasks();
-    notionStatusEl.textContent = '';
-  } catch (err) {
-    console.error('Notion archive all error:', err);
-    notionStatusEl.textContent = 'Error archiving';
-    setTimeout(() => { notionStatusEl.textContent = ''; }, 3000);
-  }
-}
-
-// ── Archive single ──
 async function notionArchive(task, row) {
   row.style.opacity = '0.3';
   try {
     await fetch('/api/notion', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'archive', id: task.id })
     });
     notionTasks = notionTasks.filter(t => t.id !== task.id);
@@ -1424,13 +1600,30 @@ async function notionArchive(task, row) {
     row.style.opacity = '1';
   }
 }
-
-// ── Update title ──
+async function notionArchiveAllDone() {
+  const doneTasks = notionTasks.filter(t => t.doneStatus === 'Done');
+  if (!doneTasks.length) return;
+  backlogMetaEl.textContent = `· archiving ${doneTasks.length}…`;
+  try {
+    await Promise.all(doneTasks.map(task =>
+      fetch('/api/notion', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'complete', id: task.id })
+      })
+    ));
+    notionTasks = notionTasks.filter(t => t.doneStatus !== 'Done');
+    renderNotionTasks();
+    backlogMetaEl.textContent = notionTasks.length ? `· ${notionTasks.length}` : '';
+  } catch (err) {
+    console.error('Notion archive all error:', err);
+    backlogMetaEl.textContent = '· error';
+    setTimeout(() => { backlogMetaEl.textContent = ''; }, 3000);
+  }
+}
 async function notionUpdateTitle(task, newTitle) {
   try {
     await fetch('/api/notion', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'update', id: task.id, updates: { title: newTitle } })
     });
     task.title = newTitle;
@@ -1439,53 +1632,44 @@ async function notionUpdateTitle(task, newTitle) {
   }
 }
 
-// ── New task ──
-function toggleNotionNew() {
-  const row = document.getElementById('notion-new-row');
+// New task inline
+function toggleBacklogNew() {
+  const row = document.getElementById('backlog-new-row');
   row.classList.toggle('open');
-  if (row.classList.contains('open')) {
-    document.getElementById('notion-new-input').focus();
-  }
+  if (row.classList.contains('open')) document.getElementById('backlog-new-input').focus();
 }
-
-async function submitNotionNew() {
-  const input = document.getElementById('notion-new-input');
+async function submitBacklogNew() {
+  const input = document.getElementById('backlog-new-input');
   const title = input.value.trim();
   if (!title) return;
   input.value = '';
-  notionStatusEl.textContent = 'Adding...';
+  backlogMetaEl.textContent = '· adding…';
   try {
     const resp = await fetch('/api/notion', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'create', title: title })
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'create', title })
     });
     const data = await resp.json();
     if (data.error) throw new Error(data.error);
     notionTasks.unshift(data);
     renderNotionTasks();
-    notionStatusEl.textContent = '';
+    backlogMetaEl.textContent = notionTasks.length ? `· ${notionTasks.length}` : '';
   } catch (err) {
     console.error('Notion create error:', err);
-    notionStatusEl.textContent = 'Error adding task';
-    setTimeout(() => { notionStatusEl.textContent = ''; }, 3000);
+    backlogMetaEl.textContent = '· error';
+    setTimeout(() => { backlogMetaEl.textContent = ''; }, 3000);
   }
 }
 
-// ──────────── Notion Voice ────────────
+// Notion voice → create task(s) in Notion
 let notionMediaRecorder = null;
 let notionAudioChunks = [];
-const notionVoiceBtn = document.getElementById('notion-voice-btn');
-const notionVoiceStatus = document.getElementById('notion-voice-status');
-
+const notionVoiceBtn = document.getElementById('backlog-voice-btn');
+const notionVoiceStatus = document.getElementById('backlog-voice-status');
 function toggleNotionVoice() {
-  if (notionMediaRecorder && notionMediaRecorder.state === 'recording') {
-    stopNotionVoice();
-  } else {
-    startNotionVoice();
-  }
+  if (notionMediaRecorder && notionMediaRecorder.state === 'recording') stopNotionVoice();
+  else startNotionVoice();
 }
-
 async function startNotionVoice() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -1499,22 +1683,20 @@ async function startNotionVoice() {
     notionMediaRecorder.start();
     notionVoiceBtn.textContent = '⏹ Stop';
     notionVoiceBtn.classList.add('recording');
-    notionVoiceStatus.textContent = 'Recording...';
+    notionVoiceStatus.textContent = 'Recording…';
   } catch (err) {
     notionVoiceStatus.textContent = 'Mic access denied';
     console.error('Mic error:', err);
   }
 }
-
 function stopNotionVoice() {
   if (notionMediaRecorder && notionMediaRecorder.state === 'recording') {
     notionMediaRecorder.stop();
     notionVoiceBtn.textContent = '+ Voice';
     notionVoiceBtn.classList.remove('recording');
-    notionVoiceStatus.textContent = 'Processing...';
+    notionVoiceStatus.textContent = 'Processing…';
   }
 }
-
 async function sendNotionVoice(blob) {
   try {
     const form = new FormData();
@@ -1523,23 +1705,21 @@ async function sendNotionVoice(blob) {
     const data = await resp.json();
     if (data.error) throw new Error(data.error);
     if (data.tasks && data.tasks.length > 0) {
-      // Create each task in Notion
-      notionVoiceStatus.textContent = `Creating ${data.tasks.length} task(s) in Notion...`;
+      notionVoiceStatus.textContent = `Creating ${data.tasks.length}…`;
       for (const t of data.tasks) {
         try {
-          const resp = await fetch('/api/notion', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+          const r = await fetch('/api/notion', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'create', title: t.label })
           });
-          const created = await resp.json();
+          const created = await r.json();
           if (!created.error) notionTasks.unshift(created);
         } catch (e) { console.error('Create error:', e); }
       }
       renderNotionTasks();
-      notionVoiceStatus.textContent = `Added ${data.tasks.length} task(s)`;
+      notionVoiceStatus.textContent = `Added ${data.tasks.length}`;
     } else {
-      notionVoiceStatus.textContent = 'No tasks found in recording';
+      notionVoiceStatus.textContent = 'No tasks found';
     }
     setTimeout(() => { notionVoiceStatus.textContent = ''; }, 3000);
   } catch (err) {
@@ -1549,11 +1729,62 @@ async function sendNotionVoice(blob) {
   }
 }
 
-// ──────────── Init ────────────
+// ════════════════════════════════════════════════════════════════
+// Settings panel
+// ════════════════════════════════════════════════════════════════
+function toggleSettings() {
+  document.getElementById('settings-panel').classList.toggle('open');
+}
+function initSettingsPanel() {
+  const hueInput = document.getElementById('hue-input');
+  const hueVal = document.getElementById('hue-val');
+  const phaseSelect = document.getElementById('phase-select');
+  const muteBell = document.getElementById('mute-bell');
+  hueInput.value = prefs.hue;
+  hueVal.textContent = prefs.hue;
+  phaseSelect.value = prefs.phaseMode;
+  muteBell.checked = prefs.muteBell;
+  hueInput.addEventListener('input', e => {
+    prefs.hue = Number(e.target.value);
+    hueVal.textContent = prefs.hue;
+    applyTheme();
+    savePrefs();
+  });
+  phaseSelect.addEventListener('change', e => {
+    prefs.phaseMode = e.target.value;
+    applyTheme();
+    savePrefs();
+  });
+  muteBell.addEventListener('change', e => {
+    prefs.muteBell = e.target.checked;
+    savePrefs();
+  });
+  // Keyboard shortcut: comma toggles the panel (unless user is typing in an input).
+  document.addEventListener('keydown', e => {
+    if (e.key !== ',' || e.metaKey || e.ctrlKey || e.altKey) return;
+    const tag = (e.target && e.target.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (e.target && e.target.isContentEditable) return;
+    e.preventDefault();
+    toggleSettings();
+  });
+  // Click outside closes.
+  document.addEventListener('click', e => {
+    const panel = document.getElementById('settings-panel');
+    if (!panel.classList.contains('open')) return;
+    if (panel.contains(e.target)) return;
+    if (e.target.closest('#settings-btn')) return;
+    panel.classList.remove('open');
+  });
+}
+initSettingsPanel();
+
+// ════════════════════════════════════════════════════════════════
+// Init
+// ════════════════════════════════════════════════════════════════
 loadItems();
 loadNotionTasks();
 
-// ──────────── Service Worker ────────────
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js');
 }
