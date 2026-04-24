@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Desk</title>
   <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f5f7">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1a1a1f">
   <meta name="theme-color" content="#f5f5f7">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -836,6 +838,9 @@ function applyDuskTheme(phase, hue) {
   r.setProperty('--accent-glow', p.accentGlow);
   r.setProperty('--bar-fill', p.barFill);
   r.setProperty('--bar-done', p.barDone);
+
+  const meta = document.querySelector('meta[name="theme-color"]:not([media])');
+  if (meta) meta.setAttribute('content', p.bgSolid);
 }
 
 // ════════════════════════════════════════════════════════════════

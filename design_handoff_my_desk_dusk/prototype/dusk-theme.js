@@ -126,4 +126,7 @@ window.applyDuskTheme = function(phase, hue) {
   r.setProperty('--accent-glow', p.accentGlow);
   r.setProperty('--bar-fill', p.barFill);
   r.setProperty('--bar-done', p.barDone);
+
+  const meta = document.querySelector('meta[name="theme-color"]:not([media])');
+  if (meta) meta.setAttribute('content', p.bgSolid);
 };
