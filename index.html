@@ -16,7 +16,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..600,0..100;1,9..144,300..600,0..100&family=Geist:wght@300..600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..600,0..100;1,9..144,300..600,0..100&family=Geist:wght@300..600&family=Source+Serif+4:opsz,wght@8..60,300..600&display=swap" rel="stylesheet">
 
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -137,14 +137,14 @@
       margin-bottom: 36px;
     }
     .clock {
-      font-family: 'Fraunces', serif;
-      font-weight: 300;
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-weight: 400;
       font-size: clamp(44px, 7vw, 60px);
       line-height: 1;
       letter-spacing: -0.5px;
       color: var(--text);
       font-variant-numeric: tabular-nums;
-      font-variation-settings: "SOFT" 100, "opsz" 144;
+      font-variation-settings: "opsz" 60;
     }
     .date {
       font-family: 'Fraunces', serif;
@@ -163,8 +163,12 @@
       text-transform: uppercase;
       margin-left: 8px;
     }
-    .weather-pill {
-      display: flex; align-items: center; gap: 10px;
+    .weather-pods {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      justify-content: flex-end;
+    }
+    .weather-pod {
+      display: inline-flex; align-items: center; gap: 6px;
       padding: 8px 14px;
       background: var(--surface);
       backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
@@ -177,9 +181,12 @@
       font-variant-numeric: tabular-nums;
       font-weight: 500;
       white-space: nowrap;
-      flex-shrink: 0;
+      transition: color 0.6s ease, border-color 0.6s ease;
     }
-    .weather-pill .glyph { color: var(--accent); font-size: 13px; line-height: 1; }
+    .weather-pod[hidden] { display: none; }
+    .weather-pod .g { font-size: 13px; line-height: 1; }
+    .weather-pod .sep { opacity: 0.4; }
+    .weather-pod.is-current { color: var(--accent); border-color: var(--accent-glow); }
 
     /* ──────── Section head ──────── */
     .section-head {
@@ -451,7 +458,7 @@
     .add-btn {
       flex: 1;
       padding: 8px 10px;
-      background: var(--surface);
+      background: color-mix(in oklch, var(--surface) 40%, transparent);
       backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
       border: 1px solid var(--border);
       border-radius: 8px;
@@ -460,7 +467,11 @@
       letter-spacing: 0.2px;
       transition: all 0.15s;
     }
-    .add-btn:hover { color: var(--text); border-color: var(--border-hi); }
+    .add-btn:hover {
+      color: var(--text);
+      border-color: var(--border-hi);
+      background: var(--surface);
+    }
     .add-btn.recording {
       color: #e07868;
       border-color: #e07868;
@@ -645,6 +656,7 @@
         align-items: flex-start;
         margin-bottom: 28px;
       }
+      .weather-pods { justify-content: flex-start; width: 100%; }
       .clock { font-size: 42px; }
       .item-content { padding: 9px 10px; gap: 7px; }
       .item-label { font-size: 13.5px; }
@@ -677,9 +689,27 @@
       <div class="clock" id="clock">—</div>
       <div class="date"><span id="date">—</span><span class="phase" id="phase"></span></div>
     </div>
-    <div class="weather-pill">
-      <span class="glyph" id="weather-glyph">◐</span>
-      <span id="weather-text">58° · mostly cloudy · sunset 7:42</span>
+    <div class="weather-pods" id="weather-pods">
+      <div class="weather-pod" data-phase="morning" hidden>
+        <span class="g">◐</span>
+        <span class="t">—°</span>
+        <span class="sep">·</span>
+        <span class="c">—</span>
+      </div>
+      <div class="weather-pod" data-phase="afternoon" hidden>
+        <span class="g">☀</span>
+        <span class="t">—°</span>
+        <span class="sep">·</span>
+        <span class="c">—</span>
+      </div>
+      <div class="weather-pod" data-phase="evening" hidden>
+        <span class="g">◑</span>
+        <span class="t">—°</span>
+        <span class="sep">·</span>
+        <span class="c">—</span>
+        <span class="sep">·</span>
+        <span class="sun">sunset —:—</span>
+      </div>
     </div>
   </header>
 
@@ -889,7 +919,7 @@ function effectivePhase() {
 }
 function applyTheme() {
   applyDuskTheme(effectivePhase(), prefs.hue);
-  updateWeatherGlyph();
+  refreshWeatherHighlight();
   updatePhaseLabel();
 }
 
@@ -940,22 +970,181 @@ function tickClock() {
   updatePhaseLabel();
   // If in auto mode, re-evaluate the phase (handles hour-boundary crossings without a full refresh).
   if (prefs.phaseMode === 'auto') applyTheme();
+  // Pod visibility is time-based, refresh regardless of phase mode.
+  refreshWeatherHighlight();
 }
 function updatePhaseLabel() {
   const phase = effectivePhase();
   const el = document.getElementById('phase');
   if (el) el.textContent = '· ' + duskPhaseLabel(phase).toUpperCase();
 }
-function updateWeatherGlyph() {
-  const glyphs = { morning: '◐', afternoon: '☀', evening: '◑', night: '☾' };
-  const el = document.getElementById('weather-glyph');
-  if (el) el.textContent = glyphs[effectivePhase()];
+// ════════════════════════════════════════════════════════════════
+// Weather
+// ════════════════════════════════════════════════════════════════
+const WEATHER_KEY = 'mydesk.weather';
+const GEO_KEY = 'mydesk.geo';
+const WEATHER_TTL_MS = 30 * 60 * 1000;
+const PHASE_HOURS = { morning: 9, afternoon: 14, evening: 19 };
+
+function wmoGlyph(code) {
+  if (code == null) return '◐';
+  if (code === 0) return '☀';
+  if (code <= 2) return '◐';
+  if (code === 3) return '◑';
+  if (code >= 45 && code <= 48) return '≋';
+  if (code >= 51 && code <= 67) return '☂';
+  if (code >= 71 && code <= 77) return '❄';
+  if (code >= 80 && code <= 82) return '☂';
+  if (code >= 95) return '⚡';
+  return '◐';
+}
+const WMO_TEXT = {
+  0: 'clear', 1: 'mostly clear', 2: 'partly cloudy', 3: 'overcast',
+  45: 'fog', 48: 'fog',
+  51: 'drizzle', 53: 'drizzle', 55: 'heavy drizzle',
+  56: 'freezing drizzle', 57: 'freezing drizzle',
+  61: 'light rain', 63: 'rain', 65: 'heavy rain',
+  66: 'freezing rain', 67: 'freezing rain',
+  71: 'light snow', 73: 'snow', 75: 'heavy snow', 77: 'snow grains',
+  80: 'rain showers', 81: 'showers', 82: 'heavy showers',
+  85: 'snow showers', 86: 'snow showers',
+  95: 'thunderstorm', 96: 'thunder + hail', 99: 'thunder + hail',
+};
+function wmoText(code) { return WMO_TEXT[code] || 'fair'; }
+const PHASE_END_HOUR = { morning: 12, afternoon: 17, evening: 21 };
+
+async function getGeo() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(GEO_KEY) || 'null');
+    if (cached && Number.isFinite(cached.lat) && Number.isFinite(cached.lon)) return cached;
+  } catch {}
+  const fromBrowser = await new Promise(resolve => {
+    if (!navigator.geolocation) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      p => resolve({ lat: p.coords.latitude, lon: p.coords.longitude }),
+      () => resolve(null),
+      { timeout: 8000, maximumAge: 24 * 60 * 60 * 1000 }
+    );
+  });
+  if (fromBrowser) {
+    localStorage.setItem(GEO_KEY, JSON.stringify(fromBrowser));
+    return fromBrowser;
+  }
+  try {
+    const r = await fetch('https://ipapi.co/json/');
+    if (r.ok) {
+      const j = await r.json();
+      if (Number.isFinite(j.latitude) && Number.isFinite(j.longitude)) {
+        const geo = { lat: j.latitude, lon: j.longitude };
+        localStorage.setItem(GEO_KEY, JSON.stringify(geo));
+        return geo;
+      }
+    }
+  } catch {}
+  return null;
+}
+
+async function fetchWeather(geo) {
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${geo.lat}&longitude=${geo.lon}` +
+    `&hourly=temperature_2m,weather_code&daily=sunset&temperature_unit=fahrenheit&timezone=auto&forecast_days=1`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('weather http ' + r.status);
+  const j = await r.json();
+  const times = (j.hourly && j.hourly.time) || [];
+  const temps = (j.hourly && j.hourly.temperature_2m) || [];
+  const codes = (j.hourly && j.hourly.weather_code) || [];
+  const phases = {};
+  for (const phase of ['morning', 'afternoon', 'evening']) {
+    const targetHour = PHASE_HOURS[phase];
+    let idx = times.findIndex(t => new Date(t).getHours() === targetHour);
+    if (idx < 0) idx = Math.min(targetHour, times.length - 1);
+    phases[phase] = {
+      temp: Math.round(temps[idx]),
+      code: codes[idx],
+    };
+  }
+  const sunsetISO = j.daily && j.daily.sunset && j.daily.sunset[0];
+  let sunset = '—:—';
+  if (sunsetISO) {
+    const d = new Date(sunsetISO);
+    let h = d.getHours();
+    const m = String(d.getMinutes()).padStart(2, '0');
+    h = ((h + 11) % 12) + 1;
+    sunset = `${h}:${m}`;
+  }
+  return { phases, sunset, fetchedAt: Date.now(), day: new Date().toDateString() };
+}
+
+function renderWeather(data) {
+  const pods = document.getElementById('weather-pods');
+  if (!pods) return;
+  const current = effectivePhase();
+  const hour = new Date().getHours();
+  for (const pod of pods.querySelectorAll('.weather-pod')) {
+    const phase = pod.dataset.phase;
+    const isPast = hour >= PHASE_END_HOUR[phase];
+    if (isPast || !data) {
+      pod.hidden = true;
+      continue;
+    }
+    const info = data.phases && data.phases[phase];
+    if (info) {
+      pod.querySelector('.g').textContent = wmoGlyph(info.code);
+      pod.querySelector('.t').textContent = `${info.temp}°`;
+      pod.querySelector('.c').textContent = wmoText(info.code);
+    }
+    if (phase === 'evening' && data.sunset) {
+      const sunEl = pod.querySelector('.sun');
+      if (sunEl) sunEl.textContent = `sunset ${data.sunset}`;
+    }
+    pod.hidden = false;
+    pod.classList.toggle('is-current', phase === current);
+  }
+}
+
+function readCachedWeather() {
+  try {
+    const w = JSON.parse(localStorage.getItem(WEATHER_KEY) || 'null');
+    if (!w) return null;
+    return w;
+  } catch { return null; }
+}
+
+function isWeatherStale(data) {
+  if (!data) return true;
+  if (data.day !== new Date().toDateString()) return true;
+  return (Date.now() - (data.fetchedAt || 0)) > WEATHER_TTL_MS;
+}
+
+async function loadWeather() {
+  const cached = readCachedWeather();
+  if (cached) renderWeather(cached);
+  if (!isWeatherStale(cached)) return;
+  const geo = await getGeo();
+  if (!geo) return;
+  try {
+    const fresh = await fetchWeather(geo);
+    localStorage.setItem(WEATHER_KEY, JSON.stringify(fresh));
+    renderWeather(fresh);
+  } catch (e) {
+    console.warn('weather fetch failed', e);
+  }
+}
+
+function refreshWeatherHighlight() {
+  const cached = readCachedWeather();
+  if (cached) renderWeather(cached);
 }
 
 // Apply theme immediately so the first paint is correct.
 applyTheme();
 tickClock();
 setInterval(tickClock, 1000);
+loadWeather();
+setInterval(loadWeather, WEATHER_TTL_MS);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') loadWeather();
+});
 
 // ════════════════════════════════════════════════════════════════
 // Sync status
